@@ -6,7 +6,7 @@ Just import your image and set a few simple parameters to get a pixelated pictur
 
 <img width="1512" height="646" alt="截屏2026-03-27 01 52 46" src="https://github.com/user-attachments/assets/9ea0ddf0-056b-46bb-86fc-e45f7798a37a" />
 <img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/29008c76-eb2c-417f-b4f2-248040ba38d3" />
-<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/b0f50501-2a6c-4176-807d-bf4db1ead907" />
+<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/329d0280-640b-4131-b03c-4ce5de69edc7" />
 <img width="1024" height="1024" alt="gb_gen_export_GB_1774547021100" src="https://github.com/user-attachments/assets/6b21f533-bd3b-492d-8050-98152c3f55d1" />
 <img width="1024" height="1024" alt="gb_gen_export_GB_1774547458076" src="https://github.com/user-attachments/assets/e84e4786-88d3-4f46-bbde-458ec2d1e6da" />
 <img width="2400" height="1792" alt="image" src="https://github.com/user-attachments/assets/165b8fd5-d8f6-4dcc-ab9d-85c681d9dd4c" />
