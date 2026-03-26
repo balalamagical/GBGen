@@ -5,20 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>GB Gen 图像实验室</title>
   
-  <!-- 设置网页图标 -->
   <link rel="icon" href="others/1024-mac.png" type="image/png">
   <link rel="apple-touch-icon" href="others/1024-mac.png">
   
-  <!-- 浏览器主题色 -->
   <meta name="theme-color" content="#171717">
   
-  <!-- PWA & iOS 全屏支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="GB Gen">
   <meta name="mobile-web-app-capable" content="yes">
 
-  <!-- 离线支持：通过 CDN 引入 React 和 Tailwind -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -54,6 +50,15 @@
     }
 
     a { text-decoration: none; }
+
+    /* 简单的弹窗动画 */
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-pop-in {
+      animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
   </style>
 </head>
 <body>
@@ -62,34 +67,18 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // --- PWA 配置：强制识别新图标 ---
     const injectManifest = () => {
       const manifest = {
         name: "GB Gen 图像实验室",
         short_name: "GB Gen",
-        start_url: ".", 
+        start_url: "./", 
         display: "standalone", 
         background_color: "#171717",
         theme_color: "#171717",
         icons: [
-          { 
-            src: "others/1024-mac.png", 
-            sizes: "192x192", 
-            type: "image/png",
-            purpose: "any maskable" 
-          },
-          { 
-            src: "others/1024-mac.png", 
-            sizes: "512x512", 
-            type: "image/png",
-            purpose: "any maskable"
-          },
-          { 
-            src: "others/1024-mac.png", 
-            sizes: "1024x1024", 
-            type: "image/png",
-            purpose: "any maskable"
-          }
+          { src: "others/1024-mac.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+          { src: "others/1024-mac.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          { src: "others/1024-mac.png", sizes: "1024x1024", type: "image/png", purpose: "maskable" }
         ]
       };
       const stringManifest = JSON.stringify(manifest);
@@ -126,6 +115,20 @@
     const IconUser = ({ size = 24, className = "" }) => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     );
+    const IconCoffee = ({ size = 24, className = "" }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+        <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+        <line x1="9" y1="1" x2="9" y2="4"/>
+        <line x1="13" y1="1" x2="13" y2="4"/>
+      </svg>
+    );
+    const IconClose = ({ size = 24, className = "" }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    );
 
     const PALETTES = [
       { id: 'pocket', name: '口袋灰 (Pocket Gray)', colors: ['#2b2b26', '#706b66', '#a89f94', '#e0d7c8'] },
@@ -157,6 +160,9 @@
       const [ditherStrength, setDitherStrength] = useState(0.1);
       const [mode, setMode] = useState('GB'); 
       const [userDisplayName, setUserDisplayName] = useState("@谢有君");
+      
+      // 新增：控制打赏弹窗显示的状态
+      const [showDonationModal, setShowDonationModal] = useState(false);
 
       const canvasRef = useRef(null);
       const fileInputRef = useRef(null);
@@ -229,8 +235,53 @@
       const containerClass = "w-full bg-zinc-800 rounded-2xl border-2 border-zinc-700 shadow-xl overflow-hidden";
 
       return (
-        <div className="min-h-screen p-4 md:p-8 flex flex-col gap-6 max-w-5xl mx-auto text-left text-zinc-200">
+        <div className="min-h-screen p-4 md:p-8 flex flex-col gap-6 max-w-5xl mx-auto text-left text-zinc-200 relative">
           
+          {/* 打赏弹窗 (Modal) */}
+          {showDonationModal && (
+            <div 
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity"
+              onClick={() => setShowDonationModal(false)}
+            >
+              <div 
+                className="bg-zinc-800 border border-zinc-700 rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-[0_0_50px_rgba(0,0,0,0.5)] relative flex flex-col items-center animate-pop-in" 
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* 关闭按钮 */}
+                <button 
+                  onClick={() => setShowDonationModal(false)} 
+                  className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-200 transition-colors p-2 hover:bg-zinc-700 rounded-full"
+                >
+                  <IconClose size={20} />
+                </button>
+                
+                <h2 className="text-xl font-bold text-zinc-100 mb-2 mt-2">请我喝杯咖啡 ☕️</h2>
+                <p className="text-xs text-zinc-400 mb-8 text-center leading-relaxed">
+                  如果这个小工具对你有帮助，或者《人生之旅》带给了你快乐，<br className="hidden sm:block"/>
+                  欢迎打赏支持我的独立开发之路！
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-6 w-full justify-center">
+                  {/* 微信收款码 */}
+                  <div className="flex flex-col items-center bg-zinc-900/50 p-4 rounded-2xl border border-zinc-700/50 w-full sm:w-[220px]">
+                    <div className="w-full aspect-square bg-white rounded-xl flex items-center justify-center overflow-hidden mb-3">
+                      <img src="others/wechatpay.jpg" alt="微信支付" className="w-full h-full object-cover" />
+                    </div>
+                    <span className="text-[13px] font-bold text-[#07c160] tracking-widest">微信支付</span>
+                  </div>
+                  
+                  {/* 支付宝收款码 */}
+                  <div className="flex flex-col items-center bg-zinc-900/50 p-4 rounded-2xl border border-zinc-700/50 w-full sm:w-[220px]">
+                    <div className="w-full aspect-square bg-white rounded-xl flex items-center justify-center overflow-hidden mb-3">
+                      <img src="others/alipay.jpg" alt="支付宝" className="w-full h-full object-cover" />
+                    </div>
+                    <span className="text-[13px] font-bold text-[#1677ff] tracking-widest">支付宝</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className={`${containerClass} p-4 flex flex-nowrap items-center justify-between gap-4 overflow-x-auto custom-scrollbar`}>
             <div className="flex items-center gap-5 flex-1 min-w-max">
@@ -257,13 +308,29 @@
                 </div>
               </div>
             </div>
-            <div className="flex gap-2 flex-shrink-0">
+            
+            {/* 按钮组 */}
+            <div className="flex gap-2 flex-shrink-0 relative">
               <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-xl flex items-center justify-center gap-1.5 transition-all border border-zinc-600 text-sm font-bold whitespace-nowrap text-zinc-100"><IconUpload size={16} />上传</button>
               <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
               <button onClick={download} disabled={!imageObj} className="px-4 py-2 bg-green-500 hover:bg-green-400 text-zinc-900 rounded-xl flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 font-bold text-sm shadow-[0_0_15px_rgba(34,197,94,0.3)] whitespace-nowrap">
                 <IconDownload size={16} />导出
               </button>
+              
+              {/* 改动：打赏咖啡按钮现在会触发弹窗 */}
+              <div className="relative group flex items-center">
+                <button 
+                  onClick={() => setShowDonationModal(true)} 
+                  className="px-3 py-2 bg-zinc-700 hover:bg-amber-600 text-zinc-100 hover:text-white rounded-xl flex items-center justify-center transition-all border border-zinc-600 shadow-sm"
+                >
+                  <IconCoffee size={16} />
+                </button>
+                <div className="absolute right-0 top-full mt-2 px-3 py-1.5 bg-zinc-900 border border-zinc-700 text-zinc-200 text-[11px] font-bold rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-40">
+                  Buy me a coffee ☕️
+                </div>
+              </div>
             </div>
+
           </div>
 
           {/* Canvas Preview */}
@@ -338,7 +405,10 @@
           
           <footer className="mt-4 text-center pb-8 space-y-1">
              <p className="text-[12px] text-zinc-500 font-medium tracking-wide leading-tight">感谢 olivvybee，愿天下开源作者一生平安快乐。</p>
-             <p className="text-[12px] text-zinc-500 font-medium tracking-wide leading-tight text-center">如果你想 support 这个小姐姐，这里是她的主页：<a href="https://ko-fi.com/olivvybee" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-green-400 underline ml-1 transition-colors">https://ko-fi.com/olivvybee</a></p>
+             <p className="text-[12px] text-zinc-500 font-medium tracking-wide leading-tight text-center">
+               原作者主页：
+               <a href="https://ko-fi.com/olivvybee" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-green-400 underline transition-colors">https://ko-fi.com/olivvybee</a>
+             </p>
           </footer>
         </div>
       );
