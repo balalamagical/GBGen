@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>GB Gen 图像实验室</title>
   
-  <!-- 设置网页图标 (已指向 others 文件夹) -->
+  <!-- 设置网页图标 -->
   <link rel="icon" href="others/1024-mac.png" type="image/png">
   <link rel="apple-touch-icon" href="others/1024-mac.png">
   
@@ -75,9 +75,24 @@
         background_color: "#171717",
         theme_color: "#171717",
         icons: [
-          { src: "others/1024-mac.png", sizes: "192x192", type: "image/png" },
-          { src: "others/1024-mac.png", sizes: "512x512", type: "image/png" },
-          { src: "others/1024-mac.png", sizes: "1024x1024", type: "image/png" }
+          { 
+            src: "others/1024-mac.png", 
+            sizes: "192x192", 
+            type: "image/png",
+            purpose: "any maskable" // 允许系统裁剪图片以填满图标
+          },
+          { 
+            src: "others/1024-mac.png", 
+            sizes: "512x512", 
+            type: "image/png",
+            purpose: "any maskable"
+          },
+          { 
+            src: "others/1024-mac.png", 
+            sizes: "1024x1024", 
+            type: "image/png",
+            purpose: "any maskable"
+          }
         ]
       };
       const stringManifest = JSON.stringify(manifest);
@@ -331,7 +346,7 @@
           )}
           
           <footer className="mt-4 text-center pb-8 space-y-1">
-             <p className="text-[12px] text-zinc-500 font-medium tracking-wide leading-tight">感谢 olivvybee，愿天下开源作者一生平安快乐。</p>
+             <p className="text-[12px] text-zinc-500 font-medium tracking-wide leading-tight text-center">感谢 olivvybee，愿天下开源作者一生平安快乐。</p>
              <p className="text-[12px] text-zinc-500 font-medium tracking-wide leading-tight text-center">如果你想 support 这个小姐姐，这里是她的主页：<a href="https://ko-fi.com/olivvybee" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-green-400 underline ml-1 transition-colors">https://ko-fi.com/olivvybee</a></p>
           </footer>
         </div>
