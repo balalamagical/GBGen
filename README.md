@@ -1,1 +1,1 @@
-请点击这里 / Please click here ：https://balalamagical.github.io/GBGen/
+请点击这里 / Please click here ：https://xieyoujune.github.io/GBGen/
