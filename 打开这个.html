@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>GB Gen 图像实验室</title>
+  
+  <!-- 设置网页图标 (已指向 others 文件夹) -->
+  <link rel="icon" href="others/1024-mac.png" type="image/png">
+  <link rel="apple-touch-icon" href="others/1024-mac.png">
+  
+  <!-- PWA & iOS 全屏支持 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GB Gen">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- 离线/单文件支持：通过 CDN 引入依赖 -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    /* 移除滚动条但保留功能，让网页更像 App */
+    body { 
+      background-color: #171717; 
+      margin: 0; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      overflow-x: hidden;
+      /* 禁止移动端长按弹出菜单和文本选择，更像原生 App */
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #171717; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #404040; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #525252; }
+    
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* 模式切换过渡 */
+    .mode-tab { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 9999px;
+      border: 2px solid #3f3f46;
+      flex-shrink: 0;
+    }
+
+    /* 链接下划线去除 */
+    a { text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- PWA 核心配置 (满足浏览器安装条件) ---
+    const injectManifest = () => {
+      const manifest = {
+        name: "GB Gen 图像实验室",
+        short_name: "GB Gen",
+        start_url: "./",
+        display: "standalone", 
+        background_color: "#171717",
+        theme_color: "#171717",
+        icons: [
+          { src: "others/1024-mac.png", sizes: "192x192", type: "image/png" },
+          { src: "others/1024-mac.png", sizes: "512x512", type: "image/png" },
+          { src: "others/1024-mac.png", sizes: "1024x1024", type: "image/png" }
+        ]
+      };
+      const stringManifest = JSON.stringify(manifest);
+      const blob = new Blob([stringManifest], {type: 'application/json'});
+      const manifestURL = URL.createObjectURL(blob);
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = manifestURL;
+      document.head.appendChild(link);
+    };
+
+    const registerServiceWorker = () => {
+      if ('serviceWorker' in navigator) {
+        const swCode = `
+          self.addEventListener('install', (e) => { self.skipWaiting(); });
+          self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+          self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request)); });
+        `;
+        const blob = new Blob([swCode], {type: 'text/javascript'});
+        const swURL = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swURL).catch(() => {});
+      }
+    };
+
+    // 图标组件
+    const IconImage = ({ size = 24, className = "" }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+    );
+    const IconUpload = ({ size = 24 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+    );
+    const IconDownload = ({ size = 24 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+    );
+    const IconUser = ({ size = 24, className = "" }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    );
+
+    const PALETTES = [
+      { id: 'pocket', name: '口袋灰 (Pocket Gray)', colors: ['#2b2b26', '#706b66', '#a89f94', '#e0d7c8'] },
+      { id: 'classic', name: '经典绿 (Classic DMG)', colors: ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'] },
+      { id: 'blue', name: '冷光蓝 (Light Blue)', colors: ['#002b59', '#005f8c', '#0098ba', '#cae6ea'] },
+      { id: 'vb', name: '虚拟男孩 (Virtual Boy)', colors: ['#000000', '#550000', '#aa0000', '#ff0000'] },
+      { id: 'gold', name: '复古金 (Warm Gold)', colors: ['#2c1b01', '#7a4d13', '#c1913c', '#f3d87a'] },
+      { id: 'cyber', name: '赛博朋克 (Cyberpunk)', colors: ['#12012e', '#005f8c', '#d9116e', '#00ffcc'] }
+    ];
+
+    const BAYER_8X8 = [
+      [ 0, 32,  8, 40,  2, 34, 10, 42], [48, 16, 56, 24, 50, 18, 58, 26],
+      [12, 44,  4, 36, 14, 46,  6, 38], [60, 28, 52, 20, 62, 30, 54, 22],
+      [ 3, 35, 11, 43,  1, 33,  9, 41], [51, 19, 59, 27, 49, 17, 57, 25],
+      [15, 47,  7, 39, 13, 45,  5, 37], [63, 31, 55, 23, 61, 29, 53, 21]
+    ];
+
+    const hexToRgb = (hex) => {
+      const bigint = parseInt(hex.replace('#', ''), 16);
+      return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+    };
+
+    function App() {
+      const [imageObj, setImageObj] = useState(null);
+      const [pixelSize, setPixelSize] = useState(6); 
+      const [paletteIdx, setPaletteIdx] = useState(0); 
+      const [brightness, setBrightness] = useState(-21);
+      const [contrast, setContrast] = useState(-16);
+      const [ditherStrength, setDitherStrength] = useState(0.1);
+      const [mode, setMode] = useState('GB'); 
+      const [userDisplayName, setUserDisplayName] = useState("@谢有君");
+
+      const canvasRef = useRef(null);
+      const fileInputRef = useRef(null);
+
+      useEffect(() => {
+        injectManifest();
+        registerServiceWorker();
+      }, []);
+
+      const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => { setImageObj(img); };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      };
+
+      const processImage = () => {
+        const canvas = canvasRef.current;
+        if (!canvas || !imageObj) return;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const { width, height } = imageObj;
+        canvas.width = width; canvas.height = height;
+        const logicalWidth = Math.max(1, Math.floor(width / pixelSize));
+        const logicalHeight = Math.max(1, Math.floor(height / pixelSize));
+        const offscreen = document.createElement('canvas');
+        offscreen.width = logicalWidth; offscreen.height = logicalHeight;
+        const offCtx = offscreen.getContext('2d');
+        offCtx.drawImage(imageObj, 0, 0, logicalWidth, logicalHeight);
+        const imgData = offCtx.getImageData(0, 0, logicalWidth, logicalHeight);
+        const data = imgData.data;
+        const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+        for (let i = 0; i < data.length; i += 4) {
+          let r = factor * (data[i] - 128) + 128 + brightness;
+          let g = factor * (data[i+1] - 128) + 128 + brightness;
+          let b = factor * (data[i+2] - 128) + 128 + brightness;
+          r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b));
+          const x = (i / 4) % logicalWidth; const y = Math.floor((i / 4) / logicalWidth);
+          const noise = ((BAYER_8X8[y % 8][x % 8] / 64) - 0.5) * 255 * ditherStrength;
+          if (mode === 'GB') {
+            let luma = 0.299 * r + 0.587 * g + 0.114 * b + noise;
+            let idx = Math.max(0, Math.min(3, Math.floor((luma / 255) * 3 + 0.5)));
+            const paletteColors = PALETTES[paletteIdx].colors.map(hexToRgb);
+            data[i] = paletteColors[idx].r; data[i+1] = paletteColors[idx].g; data[i+2] = paletteColors[idx].b;
+          } else {
+            r += noise; g += noise; b += noise;
+            data[i] = Math.max(0, Math.min(255, Math.floor(r / 8) * 8));
+            data[i+1] = Math.max(0, Math.min(255, Math.floor(g / 8) * 8));
+            data[i+2] = Math.max(0, Math.min(255, Math.floor(b / 8) * 8));
+          }
+        }
+        offCtx.putImageData(imgData, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(offscreen, 0, 0, logicalWidth, logicalHeight, 0, 0, width, height);
+      };
+
+      useEffect(() => { processImage(); }, [imageObj, pixelSize, paletteIdx, brightness, contrast, ditherStrength, mode]);
+
+      const download = () => {
+        const link = document.createElement('a');
+        link.download = `gb_gen_export_${mode}_${Date.now()}.png`;
+        link.href = canvasRef.current.toDataURL();
+        link.click();
+      };
+
+      const containerClass = "w-full bg-zinc-800 rounded-2xl border-2 border-zinc-700 shadow-xl overflow-hidden";
+
+      return (
+        <div className="min-h-screen p-4 md:p-8 flex flex-col gap-6 max-w-5xl mx-auto text-left text-zinc-200">
+          
+          {/* Header: 用户信息 + 实验室标题 + 操作按钮 */}
+          <div className={`${containerClass} p-4 flex flex-nowrap items-center justify-between gap-4 overflow-x-auto custom-scrollbar`}>
+            <div className="flex items-center gap-5 flex-1 min-w-max">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <img 
+                    src="others/xieyoujune.jpg" 
+                    alt="User Avatar" 
+                    className="user-avatar" 
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} 
+                  />
+                  <div className="hidden user-avatar bg-zinc-700 items-center justify-center"><IconUser size={20} className="text-zinc-500" /></div>
+                </div>
+                <div className="flex flex-col justify-center min-w-[140px]">
+                  <span className="text-lg font-bold text-zinc-100 leading-tight tracking-tight transition-all duration-200">{userDisplayName}</span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <a href="https://music.163.com/#/artist?id=1184020" target="_blank" rel="noopener noreferrer" className="text-[10px] text-zinc-500 font-medium hover:text-green-400 transition-colors cursor-pointer whitespace-nowrap" onMouseEnter={() => setUserDisplayName("看看我的音乐项目")} onMouseLeave={() => setUserDisplayName("@谢有君")}>独立音乐人</a>
+                    <span className="text-[10px] text-zinc-700 select-none">/</span>
+                    <a href="https://www.xiaohongshu.com/user/profile/63cac1130000000026006f9a?xsec_token=ABh-4qPXONxi4aio8Q0sJw-g3YJNeh6NJA2_hhX2GVjsk%3D&xsec_source=pc_search" target="_blank" rel="noopener noreferrer" className="text-[10px] text-zinc-500 font-medium hover:text-green-400 transition-colors cursor-pointer whitespace-nowrap" onMouseEnter={() => setUserDisplayName("看看我的游戏项目")} onMouseLeave={() => setUserDisplayName("@谢有君")}>《人生之旅》游戏开发者</a>
+                  </div>
+                </div>
+              </div>
+              <div className="self-stretch w-[1px] bg-zinc-700 mx-1 hidden sm:block"></div>
+              <div className="flex items-center gap-3 text-green-400">
+                <IconImage size={24} className="flex-shrink-0" />
+                <div className="flex flex-col justify-center">
+                  <h1 className="text-lg font-bold tracking-tight whitespace-nowrap leading-tight">GB Gen 图像实验室</h1>
+                  <p className="text-[10px] text-zinc-500 font-medium mt-0.5 whitespace-nowrap">把你的照片作品，变成经典的像素风格画，你试试看～</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-xl flex items-center justify-center gap-1.5 transition-all border border-zinc-600 text-sm font-bold whitespace-nowrap text-zinc-100"><IconUpload size={16} />上传</button>
+              <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+              <button onClick={download} disabled={!imageObj} className="px-4 py-2 bg-green-500 hover:bg-green-400 text-zinc-900 rounded-xl flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 font-bold text-sm shadow-[0_0_15px_rgba(34,197,94,0.3)] whitespace-nowrap">
+                <IconDownload size={16} />导出
+              </button>
+            </div>
+          </div>
+
+          {/* 预览区域 */}
+          <div className={`${containerClass} bg-black flex flex-col items-center justify-center min-h-[50vh] relative p-6`}>
+            <div className="absolute top-6 left-8 flex items-center gap-2">
+                <div className={`w-2.5 h-2.5 rounded-full mt-[1.5px] ${imageObj ? 'bg-red-500 animate-pulse' : 'bg-zinc-800'}`}></div>
+                <div className="text-[12px] text-zinc-500 font-bold uppercase tracking-widest leading-none text-left">显示输出</div>
+            </div>
+            {!imageObj ? (
+              <div className="flex flex-col items-center justify-center text-zinc-600 text-center space-y-4 py-24">
+                <div className="p-4 rounded-full bg-zinc-900/50"><IconImage size={80} className="opacity-20" /></div>
+                <p className="text-lg font-bold tracking-widest text-zinc-500">请提供一张图像</p>
+                <p className="text-xs text-zinc-700 whitespace-nowrap">点击上方按钮上传图片进行像素化处理</p>
+              </div>
+            ) : (
+              <div className="w-full flex flex-col items-center">
+                <canvas ref={canvasRef} className="max-w-full max-h-[60vh] mt-10 shadow-[0_0_50px_rgba(0,0,0,0.8)] border-8 border-zinc-900 rounded-sm" />
+                <div className="mt-8 flex flex-col items-center gap-1 text-center">
+                    <p className="text-[12px] text-zinc-500 uppercase tracking-widest font-black">{mode === 'GB' ? 'ORIGINAL GAME BOY MODE (DMG-01)' : 'GAME BOY COLOR MODE (CGB-001)'}</p>
+                    <p className="text-[10px] text-zinc-700 font-bold">{imageObj.width} X {imageObj.height} DOT MATRIX DISPLAY</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 控制面板 */}
+          {imageObj && (
+            <div className={`${containerClass} p-6 grid grid-cols-1 lg:grid-cols-2 gap-8`}>
+              <div className="space-y-6">
+                <div className="flex p-1 bg-zinc-900 rounded-xl border border-zinc-700">
+                    <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400 shadow-inner' : 'text-zinc-500 hover:text-zinc-300'}`}>GB 模式</button>
+                    <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400 shadow-inner' : 'text-zinc-500 hover:text-zinc-300'}`}>GBC 模式</button>
+                </div>
+                <div className="p-4 bg-zinc-900 rounded-2xl border border-zinc-700 shadow-inner">
+                  <div className="flex justify-between text-xs font-bold text-green-400 mb-3 uppercase tracking-tighter text-left">
+                    <span>像素粒径</span><span className="text-green-400">{pixelSize}px</span>
+                  </div>
+                  <input type="range" min="1" max="40" value={pixelSize} onChange={e => setPixelSize(Number(e.target.value))} className="w-full accent-green-500 h-1.5" />
+                </div>
+                <div className="space-y-4 px-2 text-left">
+                  {[
+                    { label: '亮度', val: brightness, set: setBrightness, min: -100, max: 100 },
+                    { label: '对比度', val: contrast, set: setContrast, min: -100, max: 100 },
+                    { label: '抖动颗粒', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 }
+                  ].map(item => (
+                    <div key={item.label}>
+                      <div className="flex justify-between text-[11px] text-zinc-500 mb-1 uppercase font-bold tracking-tighter">
+                        <span>{item.label}</span><span>{item.val}</span>
+                      </div>
+                      <input type="range" min={item.min} max={item.max} step={item.step || 1} value={item.val} onChange={e => item.set(Number(e.target.value))} className="w-full accent-green-500 h-1" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className={`space-y-3 transition-opacity duration-500 text-left ${mode === 'GBC' ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
+                <div className="text-[11px] text-zinc-400 font-bold uppercase ml-1 tracking-widest flex justify-between">
+                    <span>调色板 / Palettes</span>{mode === 'GBC' && <span className="text-red-500 text-[10px]">[已禁用]</span>}
+                </div>
+                <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  {PALETTES.map((p, i) => (
+                    <button key={i} onClick={() => setPaletteIdx(i)} className={`p-3 rounded-xl border transition-all flex flex-col gap-2 ${paletteIdx === i ? 'border-green-500 bg-zinc-700 shadow-lg shadow-green-900/10 text-green-400 text-left' : 'border-zinc-700 bg-zinc-900 hover:border-zinc-500 text-left'}`}>
+                      <span className="text-[10px] truncate font-bold uppercase tracking-tighter">{p.name.split(' (')[0]}</span>
+                      <div className="flex h-3 w-full rounded-sm overflow-hidden border border-zinc-800">
+                        {p.colors.map(c => <div key={c} style={{backgroundColor: c}} className="flex-1" />)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <footer className="mt-4 text-center pb-8 space-y-1">
+             <p className="text-[12px] text-zinc-500 font-medium tracking-wide leading-tight">感谢 olivvybee，愿天下开源作者一生平安快乐。</p>
+             <p className="text-[12px] text-zinc-500 font-medium tracking-wide leading-tight text-center">如果你想 support 这个小姐姐，这里是她的主页：<a href="https://ko-fi.com/olivvybee" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-green-400 underline ml-1 transition-colors">https://ko-fi.com/olivvybee</a></p>
+          </footer>
+        </div>
+      );
+    }
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
