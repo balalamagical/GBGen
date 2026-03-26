@@ -22,13 +22,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   
   <style>
-    /* 移除滚动条但保留功能，让网页更像 App */
     body { 
       background-color: #171717; 
       margin: 0; 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       overflow-x: hidden;
-      /* 禁止移动端长按弹出菜单和文本选择，更像原生 App */
       -webkit-touch-callout: none;
       user-select: none;
     }
@@ -43,7 +41,6 @@
       image-rendering: crisp-edges;
     }
 
-    /* 模式切换过渡 */
     .mode-tab { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     
     .user-avatar {
@@ -55,7 +52,6 @@
       flex-shrink: 0;
     }
 
-    /* 链接下划线去除 */
     a { text-decoration: none; }
   </style>
 </head>
@@ -65,21 +61,21 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // --- PWA 核心配置 (满足浏览器安装条件) ---
+    // --- PWA 核心配置 (优化图标背景与遮罩逻辑) ---
     const injectManifest = () => {
       const manifest = {
         name: "GB Gen 图像实验室",
         short_name: "GB Gen",
-        start_url: "./",
+        start_url: "./index.html", 
         display: "standalone", 
-        background_color: "#171717",
+        background_color: "#171717", // 强制将背景设为深色，减少白边感
         theme_color: "#171717",
         icons: [
           { 
             src: "others/1024-mac.png", 
             sizes: "192x192", 
             type: "image/png",
-            purpose: "any maskable" // 允许系统裁剪图片以填满图标
+            purpose: "any maskable" 
           },
           { 
             src: "others/1024-mac.png", 
@@ -238,7 +234,7 @@
           {/* Header: 用户信息 + 实验室标题 + 操作按钮 */}
           <div className={`${containerClass} p-4 flex flex-nowrap items-center justify-between gap-4 overflow-x-auto custom-scrollbar`}>
             <div className="flex items-center gap-5 flex-1 min-w-max">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 text-left">
                 <div className="relative">
                   <img 
                     src="others/xieyoujune.jpg" 
@@ -258,7 +254,7 @@
                 </div>
               </div>
               <div className="self-stretch w-[1px] bg-zinc-700 mx-1 hidden sm:block"></div>
-              <div className="flex items-center gap-3 text-green-400">
+              <div className="flex items-center gap-3 text-green-400 text-left">
                 <IconImage size={24} className="flex-shrink-0" />
                 <div className="flex flex-col justify-center">
                   <h1 className="text-lg font-bold tracking-tight whitespace-nowrap leading-tight">GB Gen 图像实验室</h1>
@@ -306,20 +302,20 @@
                     <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400 shadow-inner' : 'text-zinc-500 hover:text-zinc-300'}`}>GB 模式</button>
                     <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400 shadow-inner' : 'text-zinc-500 hover:text-zinc-300'}`}>GBC 模式</button>
                 </div>
-                <div className="p-4 bg-zinc-900 rounded-2xl border border-zinc-700 shadow-inner">
-                  <div className="flex justify-between text-xs font-bold text-green-400 mb-3 uppercase tracking-tighter text-left">
+                <div className="p-4 bg-zinc-900 rounded-2xl border border-zinc-700 shadow-inner text-left">
+                  <div className="flex justify-between text-xs font-bold text-green-400 mb-3 uppercase tracking-tighter">
                     <span>像素粒径</span><span className="text-green-400">{pixelSize}px</span>
                   </div>
                   <input type="range" min="1" max="40" value={pixelSize} onChange={e => setPixelSize(Number(e.target.value))} className="w-full accent-green-500 h-1.5" />
                 </div>
-                <div className="space-y-4 px-2 text-left">
+                <div className="space-y-4 px-2 text-left text-zinc-400">
                   {[
                     { label: '亮度', val: brightness, set: setBrightness, min: -100, max: 100 },
                     { label: '对比度', val: contrast, set: setContrast, min: -100, max: 100 },
                     { label: '抖动颗粒', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 }
                   ].map(item => (
                     <div key={item.label}>
-                      <div className="flex justify-between text-[11px] text-zinc-500 mb-1 uppercase font-bold tracking-tighter">
+                      <div className="flex justify-between text-[11px] mb-1 uppercase font-bold tracking-tighter">
                         <span>{item.label}</span><span>{item.val}</span>
                       </div>
                       <input type="range" min={item.min} max={item.max} step={item.step || 1} value={item.val} onChange={e => item.set(Number(e.target.value))} className="w-full accent-green-500 h-1" />
@@ -333,7 +329,7 @@
                 </div>
                 <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                   {PALETTES.map((p, i) => (
-                    <button key={i} onClick={() => setPaletteIdx(i)} className={`p-3 rounded-xl border transition-all flex flex-col gap-2 ${paletteIdx === i ? 'border-green-500 bg-zinc-700 shadow-lg shadow-green-900/10 text-green-400 text-left' : 'border-zinc-700 bg-zinc-900 hover:border-zinc-500 text-left'}`}>
+                    <button key={i} onClick={() => setPaletteIdx(i)} className={`p-3 rounded-xl border transition-all flex flex-col gap-2 ${paletteIdx === i ? 'border-green-500 bg-zinc-700 shadow-lg shadow-green-900/10 text-green-400' : 'border-zinc-700 bg-zinc-900 hover:border-zinc-500 text-zinc-400'}`}>
                       <span className="text-[10px] truncate font-bold uppercase tracking-tighter">{p.name.split(' (')[0]}</span>
                       <div className="flex h-3 w-full rounded-sm overflow-hidden border border-zinc-800">
                         {p.colors.map(c => <div key={c} style={{backgroundColor: c}} className="flex-1" />)}
