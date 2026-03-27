@@ -350,93 +350,108 @@
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-6 w-full flex-1 overflow-hidden items-stretch min-h-0">
-            {/* 左侧面板：仅上传后显示 */}
-            {imageObj && (
-              <div className={`w-full lg:w-[320px] xl:w-[360px] flex-shrink-0 ${containerClass} p-6 flex flex-col gap-4 overflow-hidden animate-pop-in`}>
-                <div className="flex gap-2 items-center">
-                  <div className="flex-1 flex p-1 bg-zinc-900/50 rounded-xl overflow-hidden">
-                      <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400' : 'text-zinc-500 hover:text-zinc-300'}`}>GB 模式</button>
-                      <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400' : 'text-zinc-500 hover:text-zinc-300'}`}>GBC 模式</button>
-                  </div>
-                  <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2.5 bg-zinc-900/50 hover:bg-zinc-700 rounded-xl transition-all text-zinc-500 hover:text-green-400 flex items-center justify-center">
-                    {isRandomized ? <IconUndo size={18} /> : <IconDice size={18} />}
-                  </button>
-                </div>
-
-                <div className="space-y-4 text-left">
-                  <div className="p-4 bg-zinc-900/50 rounded-2xl text-left">
-                    <div className="flex justify-between text-xs font-bold text-green-400 mb-3 uppercase tracking-tighter"><span>像素粒径</span><span className="text-green-400">{pixelSize}px</span></div>
-                    <input type="range" min="1" max="40" value={pixelSize} onChange={e => setPixelSize(Number(e.target.value))} className="w-full accent-green-500 h-1.5" />
-                  </div>
-                  <div className="space-y-3 px-2 text-left text-zinc-400">
-                    {[
-                      { label: '亮度', val: brightness, set: setBrightness, min: -100, max: 100 },
-                      { label: '对比度', val: contrast, set: setContrast, min: -100, max: 100 },
-                      { label: '抖动颗粒', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 }
-                    ].map(item => (
-                      <div key={item.label} className="text-left">
-                        <div className="flex justify-between text-[11px] mb-1 uppercase font-bold tracking-tighter"><span>{item.label}</span><span>{item.val}</span></div>
-                        <input type="range" min={item.min} max={item.max} step={item.step || 1} value={item.val} onChange={e => item.set(Number(e.target.value))} className="w-full accent-green-500 h-1" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 调色板布局：移除所有多余 margin 以实现完美左对齐 */}
-                <div className={`space-y-2 transition-opacity duration-500 text-left ${mode === 'GBC' ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
-                  <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-widest flex justify-between"><span>调色板 / Palettes</span></div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {PALETTES.map((p, i) => (
-                      <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-1.5 px-3 py-2 rounded-xl transition-all border ${paletteIdx === i ? 'border-green-500 bg-zinc-700 text-green-400' : 'border-transparent bg-zinc-900/40 hover:bg-zinc-900 text-zinc-400'}`}>
-                        <span className="text-[9px] font-bold uppercase tracking-tight truncate text-left">{p.name.split(' (')[0]}</span>
-                        <div className="flex h-1.5 w-full rounded-full overflow-hidden shadow-inner group-hover:scale-[1.02] transition-transform">
-                          {p.colors.map(c => <div key={c} style={{backgroundColor: c}} className="flex-1" />)}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 有君小建议：移除所有多余的左侧 margin 和 padding */}
-                <div className="mt-auto pt-4 border-t border-zinc-700/50 flex-shrink-0">
-                  <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-widest mb-1.5">有君小建议 / June's Tips</div>
-                  <div className="h-[28px] relative overflow-hidden">
-                    {JUNE_TIPS.map((tip, index) => (
-                      <div key={index} className={`absolute left-0 right-0 top-0 text-[10px] text-zinc-500 leading-tight transition-all duration-1000 ${currentTipIdx === index ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}>
-                        {tip}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 右侧预览区：自适应宽度的容器 */}
-            <div className={`flex-1 ${containerClass} bg-black flex flex-col items-center justify-center relative p-6 overflow-hidden`} onDoubleClick={() => !imageObj && fileInputRef.current?.click()}>
-              <div className="absolute top-6 left-4 flex items-center gap-2 text-left z-10">
-                  <div className={`w-2.5 h-2.5 rounded-full mt-[1.5px] ${imageObj ? 'bg-red-500 animate-pulse' : 'bg-zinc-800'}`}></div>
-                  <div className="text-[12px] text-zinc-500 font-bold uppercase tracking-widest leading-none">显示输出</div>
-              </div>
+          {/* 主体工作区容器：通过包裹和限制最大高度，锁死PWA和桌面的完美比例 */}
+          <div className="flex-1 w-full flex flex-col justify-center min-h-0">
+            <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch justify-center h-full lg:max-h-[540px] xl:max-h-[580px]">
               
-              {!imageObj ? (
-                /* 最纯粹的空白占位：仅响应双击上传事件 */
-                <div className="w-full h-full cursor-pointer"></div>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center">
-                  <div className="flex-1 flex items-center justify-center w-full min-h-0 mt-8">
-                    <canvas ref={canvasRef} className="max-w-full max-h-full rounded-sm shadow-2xl" />
+              {/* 左侧控制台：仅上传图片后伴随动画显示 */}
+              {imageObj && (
+                <div className={`w-full lg:w-[320px] xl:w-[360px] flex-shrink-0 ${containerClass} p-6 flex flex-col gap-4 overflow-hidden animate-pop-in`}>
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1 flex p-1 bg-zinc-900/50 rounded-xl overflow-hidden">
+                        <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400' : 'text-zinc-500 hover:text-zinc-300'}`}>GB 模式</button>
+                        <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400' : 'text-zinc-500 hover:text-zinc-300'}`}>GBC 模式</button>
+                    </div>
+                    <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2.5 bg-zinc-900/50 hover:bg-zinc-700 rounded-xl transition-all text-zinc-500 hover:text-green-400 flex items-center justify-center">
+                      {isRandomized ? <IconUndo size={18} /> : <IconDice size={18} />}
+                    </button>
                   </div>
-                  <div className="mt-6 mb-2 flex flex-col items-center gap-1 text-center flex-shrink-0">
-                      <p className="text-[12px] text-zinc-500 uppercase tracking-widest font-black">
-                        {isRandomized ? 'Dice Mode (Experimental)' : (mode === 'GB' ? 'Original Game Boy Mode (DMG-01)' : 'Game Boy Color Mode (CGB-001)')}
-                      </p>
-                      <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-tight">
-                        {imageObj.width} X {imageObj.height} {isRandomized ? 'STOCHASTIC RENDER' : 'DOT MATRIX DISPLAY'}
-                      </p>
+
+                  <div className="space-y-4 text-left">
+                    <div className="p-4 bg-zinc-900/50 rounded-2xl text-left">
+                      <div className="flex justify-between text-xs font-bold text-green-400 mb-3 uppercase tracking-tighter"><span>像素粒径</span><span className="text-green-400">{pixelSize}px</span></div>
+                      <input type="range" min="1" max="40" value={pixelSize} onChange={e => setPixelSize(Number(e.target.value))} className="w-full accent-green-500 h-1.5" />
+                    </div>
+                    <div className="space-y-3 px-2 text-left text-zinc-400">
+                      {[
+                        { label: '亮度', val: brightness, set: setBrightness, min: -100, max: 100 },
+                        { label: '对比度', val: contrast, set: setContrast, min: -100, max: 100 },
+                        { label: '抖动颗粒', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 }
+                      ].map(item => (
+                        <div key={item.label} className="text-left">
+                          <div className="flex justify-between text-[11px] mb-1 uppercase font-bold tracking-tighter"><span>{item.label}</span><span>{item.val}</span></div>
+                          <input type="range" min={item.min} max={item.max} step={item.step || 1} value={item.val} onChange={e => item.set(Number(e.target.value))} className="w-full accent-green-500 h-1" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 调色板布局：紧凑2列，极致左对齐 */}
+                  <div className={`space-y-2 transition-opacity duration-500 text-left ${mode === 'GBC' ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
+                    <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-widest flex justify-between"><span>调色板 / Palettes</span></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {PALETTES.map((p, i) => (
+                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-1.5 px-3 py-2 rounded-xl transition-all border ${paletteIdx === i ? 'border-green-500 bg-zinc-700 text-green-400' : 'border-transparent bg-zinc-900/40 hover:bg-zinc-900 text-zinc-400'}`}>
+                          <span className="text-[9px] font-bold uppercase tracking-tight truncate text-left">{p.name.split(' (')[0]}</span>
+                          <div className="flex h-1.5 w-full rounded-full overflow-hidden shadow-inner group-hover:scale-[1.02] transition-transform">
+                            {p.colors.map(c => <div key={c} style={{backgroundColor: c}} className="flex-1" />)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 有君小建议：高度压缩，空间留给调色板，极致左对齐 */}
+                  <div className="mt-auto pt-4 border-t border-zinc-700/50 flex-shrink-0">
+                    <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-widest mb-1.5">有君小建议 / June's Tips</div>
+                    <div className="h-[28px] relative overflow-hidden">
+                      {JUNE_TIPS.map((tip, index) => (
+                        <div key={index} className={`absolute left-0 right-0 top-0 text-[10px] text-zinc-500 leading-tight transition-all duration-1000 ${currentTipIdx === index ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}>
+                          {tip}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
+
+              {/* 右侧预览区 */}
+              <div className={`flex-1 ${containerClass} bg-black flex flex-col items-center justify-center relative p-6 overflow-hidden`} onDoubleClick={() => !imageObj && fileInputRef.current?.click()}>
+                <div className="absolute top-6 left-4 flex items-center gap-2 text-left z-10">
+                    <div className={`w-2.5 h-2.5 rounded-full mt-[1.5px] ${imageObj ? 'bg-red-500 animate-pulse' : 'bg-zinc-800'}`}></div>
+                    <div className="text-[12px] text-zinc-500 font-bold uppercase tracking-widest leading-none">显示输出</div>
+                </div>
+                
+                {!imageObj ? (
+                  /* 绝对纯净的未上传状态：仅两行等宽文字，移除图标 */
+                  <div className="w-full h-full flex flex-col items-center justify-center cursor-pointer group">
+                    <div className="relative inline-block transition-transform group-hover:scale-105 duration-500">
+                      <p className="text-[22px] font-bold text-zinc-400 tracking-wide leading-none mb-[14px]">
+                        请提供一张图像
+                      </p>
+                      <div className="flex justify-between text-[13px] font-medium text-zinc-600 leading-none">
+                        {"点击上方按钮或双击上传".split('').map((char, i) => (
+                          <span key={i}>{char}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center">
+                    <div className="flex-1 flex items-center justify-center w-full min-h-0 mt-10">
+                      <canvas ref={canvasRef} className="max-w-full max-h-full rounded-sm shadow-2xl" />
+                    </div>
+                    <div className="mt-6 mb-2 flex flex-col items-center gap-1 text-center flex-shrink-0">
+                        <p className="text-[12px] text-zinc-500 uppercase tracking-widest font-black">
+                          {isRandomized ? 'Dice Mode (Experimental)' : (mode === 'GB' ? 'Original Game Boy Mode (DMG-01)' : 'Game Boy Color Mode (CGB-001)')}
+                        </p>
+                        <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-tight">
+                          {imageObj.width} X {imageObj.height} {isRandomized ? 'STOCHASTIC RENDER' : 'DOT MATRIX DISPLAY'}
+                        </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
