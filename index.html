@@ -352,46 +352,49 @@
 
           {/* 主体工作区容器：通过包裹和限制最大高度，锁死PWA和桌面的完美比例 */}
           <div className="flex-1 w-full flex flex-col justify-center min-h-0">
-            <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch justify-center h-full lg:max-h-[540px] xl:max-h-[580px]">
+            <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch justify-center h-full lg:max-h-[560px] xl:max-h-[600px]">
               
-              {/* 左侧控制台：仅上传图片后伴随动画显示 */}
+              {/* 左侧控制台：4个模块，均分布局 */}
               {imageObj && (
-                <div className={`w-full lg:w-[320px] xl:w-[360px] flex-shrink-0 ${containerClass} p-6 flex flex-col gap-4 overflow-hidden animate-pop-in`}>
+                <div className={`w-full lg:w-[320px] xl:w-[360px] flex-shrink-0 ${containerClass} p-4 md:p-5 flex flex-col justify-between gap-4 overflow-hidden animate-pop-in`}>
+                  
+                  {/* 模块1：模式切换与骰子 */}
                   <div className="flex gap-2 items-center">
-                    <div className="flex-1 flex p-1 bg-zinc-900/50 rounded-xl overflow-hidden">
+                    <div className="flex-1 flex p-1 bg-zinc-900/40 rounded-xl overflow-hidden">
                         <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400' : 'text-zinc-500 hover:text-zinc-300'}`}>GB 模式</button>
                         <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400' : 'text-zinc-500 hover:text-zinc-300'}`}>GBC 模式</button>
                     </div>
-                    <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2.5 bg-zinc-900/50 hover:bg-zinc-700 rounded-xl transition-all text-zinc-500 hover:text-green-400 flex items-center justify-center">
+                    <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2.5 bg-zinc-900/40 hover:bg-zinc-700 rounded-xl transition-all text-zinc-500 hover:text-green-400 flex items-center justify-center">
                       {isRandomized ? <IconUndo size={18} /> : <IconDice size={18} />}
                     </button>
                   </div>
 
-                  <div className="space-y-4 text-left">
-                    <div className="p-4 bg-zinc-900/50 rounded-2xl text-left">
-                      <div className="flex justify-between text-xs font-bold text-green-400 mb-3 uppercase tracking-tighter"><span>像素粒径</span><span className="text-green-400">{pixelSize}px</span></div>
+                  {/* 模块2：参数调节卡片 */}
+                  <div className="bg-zinc-900/40 rounded-2xl p-4 md:p-5 flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between text-xs font-bold text-green-400 uppercase tracking-tighter"><span>像素粒径</span><span className="text-green-400">{pixelSize}PX</span></div>
                       <input type="range" min="1" max="40" value={pixelSize} onChange={e => setPixelSize(Number(e.target.value))} className="w-full accent-green-500 h-1.5" />
                     </div>
-                    <div className="space-y-3 px-2 text-left text-zinc-400">
+                    <div className="flex flex-col gap-3 mt-1">
                       {[
                         { label: '亮度', val: brightness, set: setBrightness, min: -100, max: 100 },
                         { label: '对比度', val: contrast, set: setContrast, min: -100, max: 100 },
                         { label: '抖动颗粒', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 }
                       ].map(item => (
-                        <div key={item.label} className="text-left">
-                          <div className="flex justify-between text-[11px] mb-1 uppercase font-bold tracking-tighter"><span>{item.label}</span><span>{item.val}</span></div>
+                        <div key={item.label} className="flex flex-col gap-1.5 text-left">
+                          <div className="flex justify-between text-[11px] font-bold text-zinc-400 tracking-tighter"><span>{item.label}</span><span>{item.val}</span></div>
                           <input type="range" min={item.min} max={item.max} step={item.step || 1} value={item.val} onChange={e => item.set(Number(e.target.value))} className="w-full accent-green-500 h-1" />
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* 调色板布局：紧凑2列，极致左对齐 */}
-                  <div className={`space-y-2 transition-opacity duration-500 text-left ${mode === 'GBC' ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
+                  {/* 模块3：调色板卡片 */}
+                  <div className={`bg-zinc-900/40 rounded-2xl p-4 md:p-5 flex flex-col gap-3 transition-opacity duration-500 text-left ${mode === 'GBC' ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
                     <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-widest flex justify-between"><span>调色板 / Palettes</span></div>
                     <div className="grid grid-cols-2 gap-2">
                       {PALETTES.map((p, i) => (
-                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-1.5 px-3 py-2 rounded-xl transition-all border ${paletteIdx === i ? 'border-green-500 bg-zinc-700 text-green-400' : 'border-transparent bg-zinc-900/40 hover:bg-zinc-900 text-zinc-400'}`}>
+                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-1.5 px-3 py-2 rounded-xl transition-all border ${paletteIdx === i ? 'border-green-500 bg-zinc-700/50 text-green-400' : 'border-transparent bg-zinc-950/40 hover:bg-zinc-800 text-zinc-400'}`}>
                           <span className="text-[9px] font-bold uppercase tracking-tight truncate text-left">{p.name.split(' (')[0]}</span>
                           <div className="flex h-1.5 w-full rounded-full overflow-hidden shadow-inner group-hover:scale-[1.02] transition-transform">
                             {p.colors.map(c => <div key={c} style={{backgroundColor: c}} className="flex-1" />)}
@@ -401,10 +404,10 @@
                     </div>
                   </div>
 
-                  {/* 有君小建议：高度压缩，空间留给调色板，极致左对齐 */}
-                  <div className="mt-auto pt-4 border-t border-zinc-700/50 flex-shrink-0">
-                    <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-widest mb-1.5">有君小建议 / June's Tips</div>
-                    <div className="h-[28px] relative overflow-hidden">
+                  {/* 模块4：有君小建议卡片 */}
+                  <div className="bg-zinc-900/40 rounded-2xl p-4 md:p-5 flex flex-col gap-1.5 flex-shrink-0">
+                    <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-widest">有君小建议 / June's Tips</div>
+                    <div className="h-[16px] relative overflow-hidden mt-1">
                       {JUNE_TIPS.map((tip, index) => (
                         <div key={index} className={`absolute left-0 right-0 top-0 text-[10px] text-zinc-500 leading-tight transition-all duration-1000 ${currentTipIdx === index ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}>
                           {tip}
