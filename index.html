@@ -22,7 +22,7 @@
   
   <style>
     body { 
-      background-color: #171717; 
+      background-color: #121212; 
       margin: 0; 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       overflow: hidden; 
@@ -48,17 +48,16 @@
       object-fit: cover;
       border-radius: 9999px;
       flex-shrink: 0;
-      transition: opacity 0.2s;
     }
 
     a { text-decoration: none; }
 
     @keyframes popIn {
-      from { opacity: 0; transform: scale(0.95); }
+      from { opacity: 0; transform: scale(0.98); }
       to { opacity: 1; transform: scale(1); }
     }
     .animate-pop-in {
-      animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
   </style>
 </head>
@@ -77,71 +76,45 @@
         background_color: "#171717",
         theme_color: "#171717",
         icons: [
-          { src: "others/1024-mac.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
-          { src: "others/1024-mac.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-          { src: "others/1024-mac.png", sizes: "1024x1024", type: "image/png", purpose: "maskable" }
+          { src: "others/1024-mac.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
         ]
       };
-      const stringManifest = JSON.stringify(manifest);
-      const blob = new Blob([stringManifest], {type: 'application/json'});
-      const manifestURL = URL.createObjectURL(blob);
+      const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
       const link = document.createElement('link');
       link.rel = 'manifest';
-      link.href = manifestURL;
+      link.href = URL.createObjectURL(blob);
       document.head.appendChild(link);
     };
 
     const registerServiceWorker = () => {
       if ('serviceWorker' in navigator) {
-        const swCode = `
-          self.addEventListener('install', (e) => { self.skipWaiting(); });
-          self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
-          self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request)); });
-        `;
+        const swCode = `self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request)); });`;
         const blob = new Blob([swCode], {type: 'text/javascript'});
-        const swURL = URL.createObjectURL(blob);
-        navigator.serviceWorker.register(swURL).catch(() => {});
+        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
       }
     };
 
-    const IconUpload = ({ size = 24, className = "" }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+    const IconUpload = ({ size = 24 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
     );
     const IconDownload = ({ size = 24 }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
     );
-    const IconUser = ({ size = 24, className = "" }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    );
-    const IconCoffee = ({ size = 24, className = "" }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
-        <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
-        <line x1="9" y1="1" x2="9" y2="4"/>
-        <line x1="13" y1="1" x2="13" y2="4"/>
+    const IconCoffee = ({ size = 24 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="13" y1="1" x2="13" y2="4"/>
       </svg>
     );
-    const IconClose = ({ size = 24, className = "" }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <line x1="18" y1="6" x2="6" y2="18"/>
-        <line x1="6" y1="6" x2="18" y2="18"/>
+    const IconClose = ({ size = 24 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    );
+    const IconDice = ({ size = 24 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/>
       </svg>
     );
-    const IconDice = ({ size = 24, className = "" }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-        <circle cx="8.5" cy="8.5" r="1" fill="currentColor"/>
-        <circle cx="15.5" cy="8.5" r="1" fill="currentColor"/>
-        <circle cx="15.5" cy="15.5" r="1" fill="currentColor"/>
-        <circle cx="8.5" cy="15.5" r="1" fill="currentColor"/>
-        <circle cx="12" cy="12" r="1" fill="currentColor"/>
-      </svg>
-    );
-    const IconUndo = ({ size = 24, className = "" }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-        <path d="M3 3v5h5"/>
-      </svg>
+    const IconUndo = ({ size = 24 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
     );
 
     const PALETTES = [
@@ -277,126 +250,120 @@
 
       const download = () => {
         const link = document.createElement('a');
-        link.download = `gb_gen_export_${mode}_${Date.now()}.png`;
+        link.download = `gb_gen_${mode}_${Date.now()}.png`;
         link.href = canvasRef.current.toDataURL();
         link.click();
       };
 
-      const containerClass = "w-full bg-zinc-800/50 rounded-2xl overflow-hidden";
+      const cardClass = "bg-zinc-900/40 border border-white/5 rounded-2xl p-5 flex flex-col";
+      const containerClass = "w-full bg-zinc-800/40 rounded-[28px] border border-white/5 overflow-hidden";
 
       return (
-        <div 
-          className="h-[100dvh] p-4 md:p-6 lg:p-8 flex flex-col gap-4 md:gap-6 max-w-7xl mx-auto text-zinc-200 relative text-left"
-          style={{
-            paddingTop: 'max(1rem, env(safe-area-inset-top))',
-            paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
-            paddingLeft: 'max(1rem, env(safe-area-inset-left))',
-            paddingRight: 'max(1rem, env(safe-area-inset-right))'
-          }}
-        >
+        <div className="h-[100dvh] flex flex-col items-center justify-center p-8 text-zinc-200">
           
           <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
 
           {/* 打赏弹窗 */}
           {showDonationModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity" onClick={() => setShowDonationModal(false)}>
-              <div className="bg-zinc-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full relative flex flex-col items-center animate-pop-in text-center" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => setShowDonationModal(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-200 transition-colors p-2 hover:bg-zinc-700 rounded-full"><IconClose size={20} /></button>
-                <h2 className="text-xl font-bold text-zinc-100 mb-2 mt-2">请我喝杯咖啡 ☕️</h2>
-                <p className="text-xs text-zinc-400 mb-8 leading-relaxed">如果这个小工具对你有帮助，欢迎打赏支持我的独立开发之路！</p>
-                <div className="flex flex-col sm:flex-row gap-6 w-full justify-center">
-                  <div className="flex flex-col items-center bg-zinc-900/30 p-4 rounded-2xl w-full sm:w-[220px]">
-                    <div className="w-full aspect-square bg-white rounded-xl flex items-center justify-center overflow-hidden mb-3"><img src="others/wechatpay.jpg" alt="微信支付" className="w-full h-full object-cover" /></div>
-                    <span className="text-[13px] font-bold text-[#07c160] tracking-widest">微信支付</span>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setShowDonationModal(false)}>
+              <div className="bg-zinc-900 border border-white/10 rounded-[32px] p-10 max-w-2xl w-full relative flex flex-col items-center animate-pop-in" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => setShowDonationModal(false)} className="absolute top-6 right-6 text-zinc-500 hover:text-zinc-200 p-2 hover:bg-zinc-800 rounded-full transition-all"><IconClose size={24} /></button>
+                <h2 className="text-2xl font-bold text-zinc-100 mb-2">请我喝杯咖啡 ☕️</h2>
+                <p className="text-sm text-zinc-500 mb-10">如果这个工具对你有帮助，欢迎打赏支持独立开发</p>
+                <div className="flex gap-8 w-full justify-center">
+                  <div className="flex flex-col items-center bg-zinc-950 p-5 rounded-3xl w-[240px]">
+                    <div className="w-full aspect-square bg-white rounded-2xl overflow-hidden mb-4"><img src="others/wechatpay.jpg" alt="微信支付" className="w-full h-full object-cover" /></div>
+                    <span className="text-sm font-bold text-[#07c160] tracking-widest">微信支付</span>
                   </div>
-                  <div className="flex flex-col items-center bg-zinc-900/30 p-4 rounded-2xl w-full sm:w-[220px]">
-                    <div className="w-full aspect-square bg-white rounded-xl flex items-center justify-center overflow-hidden mb-3"><img src="others/alipay.jpg" alt="支付宝" className="w-full h-full object-cover" /></div>
-                    <span className="text-[13px] font-bold text-[#1677ff] tracking-widest">支付宝</span>
+                  <div className="flex flex-col items-center bg-zinc-950 p-5 rounded-3xl w-[240px]">
+                    <div className="w-full aspect-square bg-white rounded-2xl overflow-hidden mb-4"><img src="others/alipay.jpg" alt="支付宝" className="w-full h-full object-cover" /></div>
+                    <span className="text-sm font-bold text-[#1677ff] tracking-widest">支付宝</span>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 顶栏 */}
-          <div className={`${containerClass} p-4 flex flex-nowrap items-center justify-between gap-4 overflow-x-auto custom-scrollbar flex-shrink-0`}>
-            <div className="flex items-center gap-5 flex-1 min-w-max text-left">
-              <div className="flex items-center gap-3">
+          {/* 绝对居中的全功能实验室窗口 */}
+          <div className="w-full max-w-7xl flex flex-col gap-6 animate-pop-in">
+            
+            {/* 顶栏 */}
+            <div className={`${containerClass} p-5 flex items-center justify-between gap-6 flex-shrink-0`}>
+              <div className="flex items-center gap-5">
                 <div className="relative">
-                  <img src="others/xieyoujune.jpg" alt="User Avatar" className="user-avatar" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                  <div className="hidden user-avatar bg-zinc-700/50 items-center justify-center"><IconUser size={20} className="text-zinc-500" /></div>
+                  <img src="others/xieyoujune.jpg" alt="Avatar" className="user-avatar border border-white/10" onError={(e) => e.target.style.display='none'} />
                 </div>
-                <div className="flex flex-col justify-center min-w-[140px]">
-                  <span className="text-lg font-bold text-zinc-100 leading-tight">{userDisplayName}</span>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <a href="https://music.163.com/#/artist?id=1184020" target="_blank" rel="noopener noreferrer" className="text-[10px] text-zinc-500 font-medium hover:text-green-400 transition-colors" onMouseEnter={() => setUserDisplayName("看看我的音乐项目")} onMouseLeave={() => setUserDisplayName("@谢有君")}>独立音乐人</a>
-                    <span className="text-[10px] text-zinc-700 select-none">/</span>
-                    <a href="https://www.xiaohongshu.com/user/profile/63cac1130000000026006f9a" target="_blank" rel="noopener noreferrer" className="text-[10px] text-zinc-500 font-medium hover:text-green-400 transition-colors" onMouseEnter={() => setUserDisplayName("看看我的游戏项目")} onMouseLeave={() => setUserDisplayName("@谢有君")}>《人生之旅》游戏开发者</a>
+                <div className="flex flex-col">
+                  <span className="text-xl font-black text-zinc-100 leading-none tracking-tight">{userDisplayName}</span>
+                  <div className="flex items-center gap-2 mt-1.5 opacity-40 text-[10px] font-bold uppercase tracking-widest">
+                    <a href="https://music.163.com/#/artist?id=1184020" target="_blank" className="hover:text-green-400">独立音乐人</a>
+                    <span>/</span>
+                    <a href="https://www.xiaohongshu.com/user/profile/63cac1130000000026006f9a" target="_blank" className="hover:text-green-400">游戏开发者</a>
                   </div>
                 </div>
-              </div>
-              <div className="self-stretch w-[1px] bg-zinc-700/50 mx-1 hidden sm:block"></div>
-              <div className="flex items-center gap-3 text-green-400 text-left">
-                <div className="flex flex-col justify-center px-2">
-                  <h1 className="text-lg font-bold tracking-tight whitespace-nowrap leading-tight">GB Gen 图像实验室</h1>
-                  <p className="text-[10px] text-zinc-500 font-medium mt-0.5 whitespace-nowrap">把你的照片作品，变成经典的像素风格画，你试试看～</p>
+                <div className="h-10 w-[1px] bg-white/10 mx-2"></div>
+                <div className="flex flex-col">
+                  <h1 className="text-xl font-black text-green-400 leading-none tracking-tight">GB Gen 图像实验室</h1>
+                  <p className="text-[10px] font-bold text-zinc-600 mt-1.5 uppercase tracking-widest">Pixel Art Generation Lab</p>
                 </div>
               </div>
+              <div className="flex gap-3">
+                <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl flex items-center gap-2 transition-all text-sm font-black uppercase tracking-widest border border-white/5"><IconUpload size={16} />上传</button>
+                <button onClick={download} disabled={!imageObj} className="px-5 py-2.5 bg-green-500 hover:bg-green-400 text-zinc-950 rounded-xl flex items-center gap-2 transition-all disabled:opacity-20 text-sm font-black uppercase tracking-widest"><IconDownload size={16} />导出</button>
+                <button onClick={() => setShowDonationModal(true)} className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl flex items-center transition-all border border-white/5"><IconCoffee size={18} /></button>
+              </div>
             </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-xl flex items-center justify-center gap-1.5 transition-all text-sm font-bold whitespace-nowrap text-zinc-100"><IconUpload size={16} />上传</button>
-              <button onClick={download} disabled={!imageObj} className="px-4 py-2 bg-green-500 hover:bg-green-400 text-zinc-900 rounded-xl flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 font-bold text-sm whitespace-nowrap"><IconDownload size={16} />导出</button>
-              <button onClick={() => setShowDonationModal(true)} className="px-3 py-2 bg-zinc-700 hover:bg-amber-600 text-zinc-100 hover:text-white rounded-xl flex items-center justify-center transition-all"><IconCoffee size={16} /></button>
-            </div>
-          </div>
 
-          {/* 主体工作区容器：通过包裹和限制最大高度，锁死PWA和桌面的完美比例 */}
-          <div className="flex-1 w-full flex flex-col justify-center min-h-0">
-            <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch justify-center h-full lg:max-h-[560px] xl:max-h-[600px]">
+            {/* 工作区：锁定桌面版比例 */}
+            <div className="flex gap-6 items-stretch justify-center h-full min-h-[500px] lg:max-h-[640px] xl:max-h-[680px]">
               
-              {/* 左侧控制台：4个结构完全相同的模块卡片，确保均分布局完美统一 */}
+              {/* 控制台：4个模块，严格垂直均分布局 */}
               {imageObj && (
-                <div className={`w-full lg:w-[320px] xl:w-[360px] flex-shrink-0 ${containerClass} p-4 md:p-5 flex flex-col justify-between gap-3 overflow-hidden animate-pop-in`}>
+                <div className={`w-[340px] xl:w-[380px] flex-shrink-0 ${containerClass} p-5 flex flex-col justify-between overflow-hidden animate-pop-in`}>
                   
-                  {/* 卡片1：模式切换与骰子 */}
-                  <div className="bg-zinc-900/40 rounded-2xl p-4 flex gap-3 items-center flex-shrink-0">
-                    <div className="flex-1 flex p-1 bg-black/20 border border-zinc-800/50 rounded-xl overflow-hidden">
-                        <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>GB 模式</button>
-                        <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>GBC 模式</button>
-                    </div>
-                    <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2.5 bg-black/20 border border-zinc-800/50 hover:bg-zinc-800 rounded-xl transition-all text-zinc-500 hover:text-green-400 flex items-center justify-center">
-                      {isRandomized ? <IconUndo size={18} /> : <IconDice size={18} />}
-                    </button>
-                  </div>
-
-                  {/* 卡片2：参数调节 */}
-                  <div className="bg-zinc-900/40 rounded-2xl p-4 flex flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex justify-between text-xs font-bold text-green-400 uppercase tracking-tighter"><span>像素粒径</span><span className="text-green-400">{pixelSize}PX</span></div>
-                      <input type="range" min="1" max="40" value={pixelSize} onChange={e => setPixelSize(Number(e.target.value))} className="w-full accent-green-500 h-1.5" />
-                    </div>
-                    <div className="flex flex-col gap-3 mt-1">
-                      {[
-                        { label: '亮度', val: brightness, set: setBrightness, min: -100, max: 100 },
-                        { label: '对比度', val: contrast, set: setContrast, min: -100, max: 100 },
-                        { label: '抖动颗粒', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 }
-                      ].map(item => (
-                        <div key={item.label} className="flex flex-col gap-1.5 text-left">
-                          <div className="flex justify-between text-[11px] font-bold text-zinc-400 tracking-tighter"><span>{item.label}</span><span>{item.val}</span></div>
-                          <input type="range" min={item.min} max={item.max} step={item.step || 1} value={item.val} onChange={e => item.set(Number(e.target.value))} className="w-full accent-green-500 h-1" />
-                        </div>
-                      ))}
+                  {/* 卡片1：模式选择与随机 */}
+                  <div className={`${cardClass} gap-4`}>
+                    <div className="flex gap-2.5 items-center">
+                      <div className="flex-1 flex p-1 bg-black/20 border border-white/5 rounded-xl">
+                          <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}>GB Mode</button>
+                          <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}>GBC Mode</button>
+                      </div>
+                      <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2.5 bg-black/20 border border-white/5 hover:bg-zinc-800 rounded-xl transition-all text-zinc-500 hover:text-green-400">
+                        {isRandomized ? <IconUndo size={20} /> : <IconDice size={20} />}
+                      </button>
                     </div>
                   </div>
 
-                  {/* 卡片3：调色板 */}
-                  <div className={`bg-zinc-900/40 rounded-2xl p-4 flex flex-col gap-3 transition-opacity duration-500 text-left ${mode === 'GBC' ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
-                    <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-widest flex justify-between"><span>调色板 / Palettes</span></div>
-                    <div className="grid grid-cols-2 gap-2">
+                  {/* 卡片2：核心参数控制 */}
+                  <div className={cardClass}>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex justify-between text-[11px] font-black text-green-400 uppercase tracking-widest"><span>像素粒径 / Pixel Size</span><span>{pixelSize}PX</span></div>
+                        <input type="range" min="1" max="40" value={pixelSize} onChange={e => setPixelSize(Number(e.target.value))} className="w-full accent-green-500 h-1.5" />
+                      </div>
+                      <div className="flex flex-col gap-4 mt-1">
+                        {[
+                          { label: '亮度 / Brightness', val: brightness, set: setBrightness, min: -100, max: 100 },
+                          { label: '对比度 / Contrast', val: contrast, set: setContrast, min: -100, max: 100 },
+                          { label: '抖动 / Dither', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 }
+                        ].map(item => (
+                          <div key={item.label} className="flex flex-col gap-1.5">
+                            <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest"><span>{item.label}</span><span>{item.val}</span></div>
+                            <input type="range" min={item.min} max={item.max} step={item.step || 1} value={item.val} onChange={e => item.set(Number(e.target.value))} className="w-full accent-green-500 h-1" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 卡片3：调色板矩阵 */}
+                  <div className={`${cardClass} transition-opacity duration-500 ${mode === 'GBC' ? 'opacity-20 pointer-events-none grayscale' : 'opacity-100'}`}>
+                    <div className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-3">调色板 / Palettes</div>
+                    <div className="grid grid-cols-2 gap-2.5">
                       {PALETTES.map((p, i) => (
-                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-1.5 px-3 py-2 rounded-xl transition-all border ${paletteIdx === i ? 'border-green-500 bg-zinc-700/50 text-green-400' : 'border-transparent bg-black/20 border-zinc-800/30 hover:bg-zinc-800 text-zinc-400'}`}>
-                          <span className="text-[9px] font-bold uppercase tracking-tight truncate text-left">{p.name.split(' (')[0]}</span>
-                          <div className="flex h-1.5 w-full rounded-full overflow-hidden shadow-inner group-hover:scale-[1.02] transition-transform">
+                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-2 px-3 py-2.5 rounded-xl transition-all border ${paletteIdx === i ? 'border-green-500 bg-zinc-800 text-green-400' : 'border-transparent bg-black/20 hover:bg-zinc-800 text-zinc-500'}`}>
+                          <span className="text-[9px] font-black uppercase tracking-tighter truncate text-left">{p.name.split(' (')[0]}</span>
+                          <div className="flex h-1.5 w-full rounded-full overflow-hidden shadow-inner group-hover:scale-[1.03] transition-transform">
                             {p.colors.map(c => <div key={c} style={{backgroundColor: c}} className="flex-1" />)}
                           </div>
                         </button>
@@ -404,12 +371,12 @@
                     </div>
                   </div>
 
-                  {/* 卡片4：有君小建议（带充足内边距确保不贴边） */}
-                  <div className="bg-zinc-900/40 rounded-2xl p-4 flex flex-col gap-2 flex-shrink-0">
-                    <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-widest">有君小建议 / June's Tips</div>
-                    <div className="h-[24px] relative overflow-hidden mt-0.5">
+                  {/* 卡片4：动态小提示 */}
+                  <div className={cardClass}>
+                    <div className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">有君建议 / June's Tips</div>
+                    <div className="h-[20px] relative overflow-hidden">
                       {JUNE_TIPS.map((tip, index) => (
-                        <div key={index} className={`absolute left-0 right-0 top-0 text-[10.5px] text-zinc-500 leading-tight transition-all duration-1000 ${currentTipIdx === index ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}>
+                        <div key={index} className={`absolute left-0 right-0 top-0 text-[10px] font-bold text-zinc-600 leading-tight transition-all duration-1000 ${currentTipIdx === index ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}>
                           {tip}
                         </div>
                       ))}
@@ -418,37 +385,26 @@
                 </div>
               )}
 
-              {/* 右侧预览区 */}
-              <div className={`flex-1 ${containerClass} bg-black flex flex-col items-center justify-center relative p-6 overflow-hidden`} onDoubleClick={() => !imageObj && fileInputRef.current?.click()}>
-                <div className="absolute top-6 left-4 flex items-center gap-2 text-left z-10">
-                    <div className={`w-2.5 h-2.5 rounded-full mt-[1.5px] ${imageObj ? 'bg-red-500 animate-pulse' : 'bg-zinc-800'}`}></div>
-                    <div className="text-[12px] text-zinc-500 font-bold uppercase tracking-widest leading-none">显示输出</div>
+              {/* 预览显示区：极致留白，纯粹工作台 */}
+              <div 
+                className={`flex-1 ${containerClass} bg-[#000000] flex flex-col items-center justify-center relative p-8 border border-white/5`} 
+                onDoubleClick={() => !imageObj && fileInputRef.current?.click()}
+              >
+                <div className="absolute top-8 left-8 flex items-center gap-3 z-10">
+                    <div className={`w-3 h-3 rounded-full ${imageObj ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.6)] animate-pulse' : 'bg-zinc-900'}`}></div>
+                    <div className="text-[12px] text-zinc-600 font-black uppercase tracking-[0.2em] leading-none">显示输出 / Live Output</div>
                 </div>
                 
-                {!imageObj ? (
-                  /* 绝对纯净的未上传状态：仅两行等宽文字，移除图标 */
-                  <div className="w-full h-full flex flex-col items-center justify-center cursor-pointer group">
-                    <div className="relative inline-block transition-transform group-hover:scale-105 duration-500">
-                      <p className="text-[22px] font-bold text-zinc-400 tracking-wide leading-none mb-[14px]">
-                        请提供一张图像
-                      </p>
-                      <div className="flex justify-between text-[13px] font-medium text-zinc-600 leading-none">
-                        {"点击上方按钮或双击上传".split('').map((char, i) => (
-                          <span key={i}>{char}</span>
-                        ))}
-                      </div>
+                {imageObj && (
+                  <div className="w-full h-full flex flex-col items-center justify-center animate-pop-in">
+                    <div className="flex-1 flex items-center justify-center w-full min-h-0 mt-8">
+                      <canvas ref={canvasRef} className="max-w-full max-h-full rounded-sm shadow-[0_40px_100px_rgba(0,0,0,0.8)]" />
                     </div>
-                  </div>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center">
-                    <div className="flex-1 flex items-center justify-center w-full min-h-0 mt-10">
-                      <canvas ref={canvasRef} className="max-w-full max-h-full rounded-sm shadow-2xl" />
-                    </div>
-                    <div className="mt-6 mb-2 flex flex-col items-center gap-1 text-center flex-shrink-0">
-                        <p className="text-[12px] text-zinc-500 uppercase tracking-widest font-black">
+                    <div className="mt-10 mb-2 flex flex-col items-center gap-2 text-center flex-shrink-0">
+                        <p className="text-[13px] text-zinc-400 font-black uppercase tracking-[0.3em]">
                           {isRandomized ? 'Dice Mode (Experimental)' : (mode === 'GB' ? 'Original Game Boy Mode (DMG-01)' : 'Game Boy Color Mode (CGB-001)')}
                         </p>
-                        <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-tight">
+                        <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-[0.4em]">
                           {imageObj.width} X {imageObj.height} {isRandomized ? 'STOCHASTIC RENDER' : 'DOT MATRIX DISPLAY'}
                         </p>
                     </div>
@@ -456,13 +412,15 @@
                 )}
               </div>
             </div>
+
+            {/* 页脚：统一一行 */}
+            <footer className="py-2 text-center opacity-30 hover:opacity-100 transition-opacity">
+               <p className="text-[10px] text-zinc-500 font-bold tracking-widest uppercase">
+                 感谢 olivvybee，愿天下开源作者一生平安快乐。原作者主页：<a href="https://ko-fi.com/olivvybee" target="_blank" className="underline hover:text-green-400">https://ko-fi.com/olivvybee</a>
+               </p>
+            </footer>
+
           </div>
-          
-          <footer className="py-2 text-center flex-shrink-0">
-             <p className="text-[10px] text-zinc-500 font-medium tracking-wide leading-tight">
-               感谢 olivvybee，愿天下开源作者一生平安快乐。原作者主页：<a href="https://ko-fi.com/olivvybee" target="_blank" rel="noopener noreferrer" className="text-zinc-600 hover:text-green-400 underline transition-colors">https://ko-fi.com/olivvybee</a>
-             </p>
-          </footer>
         </div>
       );
     }
