@@ -5,12 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>GB Gen 图像实验室</title>
   
+  <!-- 基础 Favicon -->
   <link rel="icon" href="others/icon.png" type="image/png">
+  
+  <!-- 苹果设备专用：强制适配苹果几大设备的图标拉伸规范 -->
   <link rel="apple-touch-icon" href="others/icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="others/icon.png">
+  
   <!-- <link rel="manifest" href="others/manifest.json"> -->
   
   <meta name="theme-color" content="#171717">
   
+  <!-- 苹果 WebApp 全屏规范 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="GB Gen">
@@ -144,6 +150,12 @@
         icons: [
           { 
             src: "others/icon.png", 
+            sizes: "180x180", 
+            type: "image/png",
+            purpose: "any" 
+          },
+          { 
+            src: "others/icon.png", 
             sizes: "192x192", 
             type: "image/png",
             purpose: "any" 
@@ -151,6 +163,12 @@
           { 
             src: "others/icon.png", 
             sizes: "512x512", 
+            type: "image/png",
+            purpose: "any" 
+          },
+          { 
+            src: "others/icon.png", 
+            sizes: "1024x1024", 
             type: "image/png",
             purpose: "any" 
           }
@@ -557,7 +575,7 @@
                     <span className="text-sm font-bold text-[#07c160] tracking-widest">微信支付</span>
                   </div>
                   <div className="flex flex-col items-center bg-zinc-950 p-5 rounded-3xl w-[240px]">
-                    <div className="w-full aspect-square bg-white rounded-xl flex items-center justify-center overflow-hidden mb-4"><img src="others/alipay.jpg" alt="支付宝" className="w-full h-full object-cover" /></div>
+                    <div className="w-full aspect-square bg-white rounded-2xl overflow-hidden mb-4"><img src="others/alipay.jpg" alt="支付宝" className="w-full h-full object-cover" /></div>
                     <span className="text-sm font-bold text-[#1677ff] tracking-widest">支付宝</span>
                   </div>
                 </div>
