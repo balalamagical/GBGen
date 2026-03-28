@@ -6,17 +6,18 @@
   <title>GB Gen 图像实验室</title>
   
   <!-- 基础 Favicon -->
-  <link rel="icon" href="others/icon.png?v=1" type="image/png">
+  <link rel="icon" href="others/icon.png?v=20240329" type="image/png">
   
-  <!-- 苹果设备专用：彻底消除 PWA 桌面图标白边 -->
-  <!-- 使用 precomposed 声明，强制系统 1:1 物理拉伸，禁止系统自动填充白底 -->
-  <link rel="apple-touch-icon-precomposed" href="others/icon.png?v=1">
-  <link rel="apple-touch-icon" sizes="180x180" href="others/icon.png?v=1">
+  <!-- Reddit 社区推荐的 iOS 极致去白边方案 -->
+  <!-- 1. 使用 precomposed 属性强制 iOS 放弃任何自动补边和缩放处理 -->
+  <link rel="apple-touch-icon-precomposed" href="others/icon.png?v=20240329">
+  <!-- 2. 不带 sizes 的声明通常在最新版 iOS 中具有最高优先级，防止系统因匹配尺寸而产生内缩 -->
+  <link rel="apple-touch-icon" href="others/icon.png?v=20240329">
   
-  <!-- 颜色配置同步 -->
+  <!-- 系统颜色强制同步 -->
   <meta name="theme-color" content="#0c0c0c">
   
-  <!-- 苹果 WebApp 强制标准适配 -->
+  <!-- 苹果 WebApp 规范：强制沉浸式全屏 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="GB Gen">
@@ -140,23 +141,23 @@
         short_name: "GB Gen",
         start_url: "./", 
         display: "standalone", 
-        background_color: "#0c0c0c", // 强制启动页背景与应用统一，消除缝隙
+        background_color: "#0c0c0c", // 必须与 Body 颜色绝对一致
         theme_color: "#0c0c0c",
         icons: [
           { 
-            src: "others/icon.png?v=1", 
+            src: "others/icon.png?v=20240329", 
             sizes: "180x180", 
             type: "image/png",
-            purpose: "any" // 设定为“不可遮罩”，阻止系统为了适配圆角而内缩图标
+            purpose: "any" 
           },
           { 
-            src: "others/icon.png?v=1", 
+            src: "others/icon.png?v=20240329", 
             sizes: "192x192", 
             type: "image/png",
             purpose: "any" 
           },
           { 
-            src: "others/icon.png?v=1", 
+            src: "others/icon.png?v=20240329", 
             sizes: "512x512", 
             type: "image/png",
             purpose: "any" 
