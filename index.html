@@ -59,6 +59,72 @@
     .animate-pop-in {
       animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
+
+    /* 完全扁平化自定义滑块 */
+    .custom-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 9999px;
+      outline: none;
+      border: none;
+      margin: 0; /* 消除默认外边距影响 */
+    }
+
+    /* Chrome/Safari/Edge 轨道：必须显式声明高度，否则 thumb 的偏移会计算错误 */
+    .custom-slider::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 4px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      border-radius: 9999px;
+    }
+
+    /* Chrome/Safari/Edge 滑块 */
+    .custom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 10px; /* 与"显示输出"的指示灯保持一致的尺寸 (10px) */
+      height: 10px;
+      border-radius: 50%;
+      background: #4ade80;
+      cursor: pointer;
+      border: none;
+      box-shadow: none;
+      margin-top: -3px; /* 完美居中公式：(轨道高度 4px - 滑块高度 10px) / 2 = -3px */
+    }
+
+    /* Firefox 轨道 */
+    .custom-slider::-moz-range-track {
+      width: 100%;
+      height: 4px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      border-radius: 9999px;
+    }
+
+    /* Firefox 滑块 */
+    .custom-slider::-moz-range-thumb {
+      width: 10px; 
+      height: 10px;
+      border-radius: 50%;
+      background: #4ade80;
+      cursor: pointer;
+      border: none;
+      box-shadow: none;
+      /* Firefox 原生自带垂直居中，不需要 margin-top */
+    }
+
+    /* 急促闪烁的红灯动画，用于录像反馈 */
+    @keyframes fastBlink {
+      0%, 100% { opacity: 1; box-shadow: 0 0 15px rgba(239, 68, 68, 1); }
+      50% { opacity: 0.3; box-shadow: 0 0 2px rgba(239, 68, 68, 0.5); }
+    }
+    .animate-fast-blink {
+      animation: fastBlink 0.3s ease-in-out infinite;
+    }
   </style>
 </head>
 <body>
@@ -114,6 +180,12 @@
     const IconUndo = ({ size = 24 }) => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
     );
+    const IconFlask = ({ size = 24 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a2 2 0 0 0 1.8 2.95h10.96a2 2 0 0 0 1.8-2.95L14.2 10.42a2 2 0 0 1-.2-1.316V2"/>
+        <path d="M8.5 2h7"/><path d="M7 16h10"/>
+      </svg>
+    );
 
     const PALETTES = [
       { id: 'pocket', name: '口袋灰 (Pocket Gray)', colors: ['#2b2b26', '#706b66', '#a89f94', '#e0d7c8'] },
@@ -159,10 +231,46 @@
       
       const [prevSettings, setPrevSettings] = useState(null);
       const [isRandomized, setIsRandomized] = useState(false);
+      const [isLabMode, setIsLabMode] = useState(false);
       const [currentTipIdx, setCurrentTipIdx] = useState(0);
+      const [isRecording, setIsRecording] = useState(false);
 
       const canvasRef = useRef(null);
       const fileInputRef = useRef(null);
+      
+      // ========== 高性能动画与防闭包陷阱的 Ref ==========
+      const processedCanvasRef = useRef(null);
+      const animationRef = useRef(null);
+      
+      const imageObjRef = useRef(imageObj);
+      const pixelSizeRef = useRef(pixelSize);
+      const paletteIdxRef = useRef(paletteIdx);
+      const brightnessRef = useRef(brightness);
+      const contrastRef = useRef(contrast);              // 用户设定的基准对比度
+      const dynamicContrastRef = useRef(contrast);       // 引擎内部动态计算的对比度 (供Lab模式抖动使用)
+      const ditherStrengthRef = useRef(ditherStrength);
+      const modeRef = useRef(mode);
+      const isLabModeRef = useRef(isLabMode);
+      
+      // 滑块拖拽保护锁：防止底层DOM操作与用户拖拽冲突
+      const isDraggingRef = useRef(false);
+
+      // 同步最新状态到 Refs
+      useEffect(() => { imageObjRef.current = imageObj; }, [imageObj]);
+      useEffect(() => { pixelSizeRef.current = pixelSize; }, [pixelSize]);
+      useEffect(() => { paletteIdxRef.current = paletteIdx; }, [paletteIdx]);
+      useEffect(() => { brightnessRef.current = brightness; }, [brightness]);
+      useEffect(() => { ditherStrengthRef.current = ditherStrength; }, [ditherStrength]);
+      useEffect(() => { modeRef.current = mode; }, [mode]);
+      useEffect(() => { isLabModeRef.current = isLabMode; }, [isLabMode]);
+      
+      // 用户改变滑块时，同步基准值；若不在Lab模式，直接覆盖渲染值
+      useEffect(() => { 
+          contrastRef.current = contrast; 
+          if (!isLabModeRef.current) {
+              dynamicContrastRef.current = contrast;
+          }
+      }, [contrast]);
 
       useEffect(() => {
         injectManifest();
@@ -204,33 +312,56 @@
         }
       };
 
+      // 核心处理逻辑：从 Refs 读取参数，仅更新缓存画布，并按需推送到主画布
       const processImage = () => {
+        const img = imageObjRef.current;
         const canvas = canvasRef.current;
-        if (!canvas || !imageObj) return;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const { width, height } = imageObj;
+        if (!canvas || !img) return false;
+
+        if (!processedCanvasRef.current) {
+          processedCanvasRef.current = document.createElement('canvas');
+        }
+        const pCanvas = processedCanvasRef.current;
+
+        const width = img.width;
+        const height = img.height;
         canvas.width = width; canvas.height = height;
-        const logicalWidth = Math.max(1, Math.floor(width / pixelSize));
-        const logicalHeight = Math.max(1, Math.floor(height / pixelSize));
+        pCanvas.width = width; pCanvas.height = height;
+        
+        // 从 Refs 取当前应用值
+        const pSize = pixelSizeRef.current;
+        const activeContrast = dynamicContrastRef.current; // 使用动态波动的对比度
+        const bBright = brightnessRef.current;
+        const dStr = ditherStrengthRef.current;
+        const pIdx = paletteIdxRef.current;
+        const curMode = modeRef.current;
+
+        const logicalWidth = Math.max(1, Math.floor(width / pSize));
+        const logicalHeight = Math.max(1, Math.floor(height / pSize));
+        
         const offscreen = document.createElement('canvas');
         offscreen.width = logicalWidth; offscreen.height = logicalHeight;
         const offCtx = offscreen.getContext('2d');
-        offCtx.drawImage(imageObj, 0, 0, logicalWidth, logicalHeight);
+        offCtx.drawImage(img, 0, 0, logicalWidth, logicalHeight);
+        
         const imgData = offCtx.getImageData(0, 0, logicalWidth, logicalHeight);
         const data = imgData.data;
-        const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+        const factor = (259 * (activeContrast + 255)) / (255 * (259 - activeContrast));
+        
         for (let i = 0; i < data.length; i += 4) {
           let r = data[i], g = data[i+1], b = data[i+2];
-          r = factor * (r - 128) + 128 + brightness;
-          g = factor * (g - 128) + 128 + brightness;
-          b = factor * (b - 128) + 128 + brightness;
+          r = factor * (r - 128) + 128 + bBright;
+          g = factor * (g - 128) + 128 + bBright;
+          b = factor * (b - 128) + 128 + bBright;
           r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b));
+          
           const x = (i / 4) % logicalWidth; const y = Math.floor((i / 4) / logicalWidth);
-          const noise = ((BAYER_8X8[y % 8][x % 8] / 64) - 0.5) * 255 * ditherStrength;
-          if (mode === 'GB') {
+          const noise = ((BAYER_8X8[y % 8][x % 8] / 64) - 0.5) * 255 * dStr;
+          
+          if (curMode === 'GB') {
             let luma = 0.299 * r + 0.587 * g + 0.114 * b + noise;
             let idx = Math.max(0, Math.min(3, Math.floor((luma / 255) * 3 + 0.5)));
-            const paletteColors = PALETTES[paletteIdx].colors.map(hexToRgb);
+            const paletteColors = PALETTES[pIdx].colors.map(hexToRgb);
             data[i] = paletteColors[idx].r; data[i+1] = paletteColors[idx].g; data[i+2] = paletteColors[idx].b;
           } else {
             r += noise; g += noise; b += noise;
@@ -240,17 +371,192 @@
           }
         }
         offCtx.putImageData(imgData, 0, 0);
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(offscreen, 0, 0, logicalWidth, logicalHeight, 0, 0, width, height);
+        
+        const pCtx = pCanvas.getContext('2d', { willReadFrequently: true });
+        pCtx.imageSmoothingEnabled = false;
+        pCtx.clearRect(0, 0, width, height);
+        pCtx.drawImage(offscreen, 0, 0, logicalWidth, logicalHeight, 0, 0, width, height);
+
+        // 如果没有开启实验室模式，直接将缓存结果输出至主屏幕
+        if (!isLabModeRef.current) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(pCanvas, 0, 0);
+        }
+        return true;
       };
 
-      useEffect(() => { processImage(); }, [imageObj, pixelSize, paletteIdx, brightness, contrast, ditherStrength, mode]);
+      // 故障动画循环（Lab Mode 专属引擎）
+      const glitchLoop = () => {
+          if (!isLabModeRef.current) return;
+          const canvas = canvasRef.current;
+          if (!canvas || !imageObjRef.current) return;
+
+          // ==========================================
+          // 核心机制：对比度在设定值 +0 到 +20 之间高频波动
+          // ==========================================
+          const baseC = contrastRef.current;
+          let needsUpdate = false;
+          
+          if (Math.random() < 0.25) { 
+              // 25% 概率触发电压（对比度）波动飙升
+              dynamicContrastRef.current = baseC + (Math.random() * 20);
+              needsUpdate = true;
+          } else if (Math.random() < 0.1) {
+              // 10% 概率恢复正常电压（对比度）
+              dynamicContrastRef.current = baseC;
+              needsUpdate = true;
+          }
+
+          // 核心！联动 UI 滑块的自动抽搐（且避开用户正在手动拖拽时的冲突）
+          if (needsUpdate) {
+              processImage(); 
+              if (!isDraggingRef.current) {
+                  const slider = document.getElementById('slider-contrast');
+                  const display = document.getElementById('display-contrast');
+                  if (slider) {
+                      slider.value = dynamicContrastRef.current;
+                      const pct = ((dynamicContrastRef.current - (-100)) / 200) * 100;
+                      slider.style.background = `linear-gradient(to right, #4ade80 ${pct}%, #3f3f46 ${pct}%)`;
+                  }
+                  if (display) display.innerText = Math.floor(dynamicContrastRef.current);
+              }
+          }
+
+          const pCanvas = processedCanvasRef.current;
+          if (!pCanvas) return;
+
+          const ctx = canvas.getContext('2d');
+          const w = canvas.width;
+          const h = canvas.height;
+          const currentPixelSize = pixelSizeRef.current;
+
+          // 先画入当前的底层渲染结果 (带着波动的对比度)
+          ctx.drawImage(pCanvas, 0, 0);
+
+          // 随机注入游戏机故障视觉机理
+          if (Math.random() < 0.3) {
+              let drawYOffset = 0;
+              // 1. 垂直跳帧 (V-Sync Jump)
+              if (Math.random() < 0.2) { 
+                 drawYOffset = Math.floor((Math.random() - 0.5) * 10) * currentPixelSize;
+                 ctx.fillStyle = '#000';
+                 ctx.fillRect(0, 0, w, h);
+                 ctx.drawImage(pCanvas, 0, drawYOffset);
+              }
+              // 2. 图像撕裂与水平切片 (Horizontal Tearing)
+              if (Math.random() < 0.5) { 
+                 const numSlices = Math.floor(Math.random() * 4) + 1;
+                 for(let i = 0; i < numSlices; i++) {
+                     const sliceY = Math.floor((Math.random() * h) / currentPixelSize) * currentPixelSize;
+                     const sliceH = Math.floor((Math.random() * (h * 0.1)) / currentPixelSize) * currentPixelSize + currentPixelSize;
+                     const shiftX = Math.floor((Math.random() - 0.5) * 15) * currentPixelSize; 
+                     ctx.drawImage(pCanvas, 0, sliceY, w, sliceH, shiftX, sliceY + drawYOffset, w, sliceH);
+                 }
+              }
+              // 3. 接触不良导致的亮度跌落闪烁 (Exposure Drop)
+              if (Math.random() < 0.2) { 
+                  ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                  ctx.fillRect(0, 0, w, h);
+              }
+          }
+          
+          animationRef.current = requestAnimationFrame(glitchLoop);
+      };
+
+      // 监听常规参数变动触发重绘 (此时不在 Lab 模式下会立即应用)
+      useEffect(() => { 
+        if (!isLabMode) {
+           dynamicContrastRef.current = contrast;
+        }
+        processImage(); 
+      }, [imageObj, pixelSize, paletteIdx, brightness, contrast, ditherStrength, mode]);
+
+      // 监听 Lab 模式开关，负责启停录像前的视觉引擎，并重置参数
+      useEffect(() => {
+        if (isLabMode && imageObj) {
+           if (animationRef.current) cancelAnimationFrame(animationRef.current);
+           glitchLoop();
+        } else {
+           if (animationRef.current) cancelAnimationFrame(animationRef.current);
+           // 确保退出时，将对比度完美复原为用户原本设置的固定值
+           dynamicContrastRef.current = contrastRef.current;
+           processImage();
+           
+           // 恢复 UI 滑块位置与渐变背景
+           const slider = document.getElementById('slider-contrast');
+           const display = document.getElementById('display-contrast');
+           if (slider) {
+               slider.value = contrastRef.current;
+               const pct = ((contrastRef.current - (-100)) / 200) * 100;
+               slider.style.background = `linear-gradient(to right, #4ade80 ${pct}%, #3f3f46 ${pct}%)`;
+           }
+           if (display) display.innerText = Math.floor(contrastRef.current);
+        }
+        return () => {
+           if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        };
+      }, [isLabMode, imageObj]);
 
       const download = () => {
-        const link = document.createElement('a');
-        link.download = `gb_gen_${mode}_${Date.now()}.png`;
-        link.href = canvasRef.current.toDataURL();
-        link.click();
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        // 如果处于实验室模式，导出 5秒 MP4 视频 (录制期间闪烁红灯)
+        if (isLabMode) {
+          if (isRecording) return; 
+          setIsRecording(true);
+
+          const stream = canvas.captureStream(30);
+          
+          let mimeType = '';
+          if (MediaRecorder.isTypeSupported('video/mp4')) {
+            mimeType = 'video/mp4';
+          } else if (MediaRecorder.isTypeSupported('video/webm; codecs=vp9')) {
+            mimeType = 'video/webm; codecs=vp9';
+          } else if (MediaRecorder.isTypeSupported('video/webm')) {
+            mimeType = 'video/webm';
+          }
+
+          const options = mimeType ? { mimeType } : {};
+          const recorder = new MediaRecorder(stream, options);
+          const chunks = [];
+
+          recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chunks.push(e.data);
+          };
+
+          recorder.onstop = () => {
+            const actualMime = mimeType || 'video/mp4';
+            const extension = actualMime.includes('mp4') ? 'mp4' : 'webm';
+            const blob = new Blob(chunks, { type: actualMime });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.download = `gb_gen_lab_mode_${Date.now()}.${extension}`;
+            link.href = url;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            setIsRecording(false);
+          };
+
+          recorder.start();
+          
+          // 录制 5 秒钟的故障动画
+          setTimeout(() => {
+            if (recorder.state === "recording") {
+              recorder.stop();
+            }
+          }, 5000);
+
+        } else {
+          // 普通模式，导出 PNG 图片
+          const link = document.createElement('a');
+          link.download = `gb_gen_${mode}_${Date.now()}.png`;
+          link.href = canvas.toDataURL();
+          link.click();
+        }
       };
 
       const cardClass = "bg-zinc-900/40 rounded-2xl p-5 flex flex-col";
@@ -289,7 +595,7 @@
           )}
 
           <div className="w-[75vw] max-w-5xl flex flex-col gap-5 animate-pop-in">
-            {/* 顶栏：移除外边框 */}
+            {/* 顶栏：完全移除所有边框 */}
             <div className={`${containerClass} p-4 flex items-center justify-between gap-6 flex-shrink-0`}>
               <div className="flex items-center gap-5 text-left">
                 <img src="others/xieyoujune.jpg" alt="Avatar" className="user-avatar" onError={(e) => e.target.style.display='none'} />
@@ -309,22 +615,38 @@
               </div>
               <div className="flex gap-2">
                 <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl flex items-center gap-2 transition-all text-sm font-black uppercase tracking-widest"><IconUpload size={16} />上传</button>
-                <button onClick={download} disabled={!imageObj} className="px-5 py-2.5 bg-green-500 hover:bg-green-400 text-zinc-950 rounded-xl flex items-center gap-2 transition-all disabled:opacity-20 text-sm font-black uppercase tracking-widest"><IconDownload size={16} />导出</button>
+                <button onClick={download} disabled={!imageObj || isRecording} className="px-5 py-2.5 bg-green-500 hover:bg-green-400 text-zinc-950 rounded-xl flex items-center gap-2 transition-all disabled:opacity-20 text-sm font-black uppercase tracking-widest min-w-[110px] justify-center">
+                  {isRecording ? (
+                    <span className="flex items-center gap-2 animate-pulse"><div className="w-2 h-2 bg-red-500 rounded-full"></div> 录制中</span>
+                  ) : (
+                    <><IconDownload size={16} />导出</>
+                  )}
+                </button>
                 <button onClick={() => setShowDonationModal(true)} className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl flex items-center transition-all"><IconCoffee size={18} /></button>
               </div>
             </div>
 
             <div className="flex gap-5 items-stretch justify-center h-full min-h-[480px] lg:max-h-[540px] xl:max-h-[580px]">
-              {/* 控制台：移除所有内部模块边框 */}
+              
+              {/* 控制台 */}
               {imageObj && (
                 <div className={`w-[320px] xl:w-[350px] flex-shrink-0 ${containerClass} p-4 flex flex-col justify-between overflow-hidden animate-pop-in`}>
                   
-                  {/* 卡片1：模式选择 */}
+                  {/* 卡片1：模式选择与新加的 Lab 按钮 */}
                   <div className={`${cardClass} p-4`}>
                     <div className="flex gap-2.5 items-center">
-                      <div className="flex-1 flex p-1 bg-black/30 rounded-xl">
-                          <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}>GB Mode</button>
-                          <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}>GBC Mode</button>
+                      <div className="flex-1 flex p-1 bg-black/30 rounded-xl items-stretch">
+                          <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}>GB</button>
+                          <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}>GBC</button>
+                          <div className="w-[1px] bg-white/5 mx-1 my-1"></div>
+                          {/* 新增的 Lab Mode 按钮 */}
+                          <button 
+                            onClick={() => setIsLabMode(!isLabMode)} 
+                            className={`px-3 flex items-center justify-center rounded-lg transition-all ${isLabMode ? 'bg-green-500/20 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}
+                            title="Lab Mode (Glitch Effect)"
+                          >
+                            <IconFlask size={16} />
+                          </button>
                       </div>
                       <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2.5 bg-black/30 hover:bg-zinc-800 rounded-xl transition-all text-zinc-500 hover:text-green-400">
                         {isRandomized ? <IconUndo size={18} /> : <IconDice size={18} />}
@@ -332,22 +654,45 @@
                     </div>
                   </div>
 
-                  {/* 卡片2：参数控制 */}
+                  {/* 卡片2：参数控制（滑块动态自控机制） */}
                   <div className={`${cardClass} p-4`}>
                     <div className="flex flex-col gap-4 text-left">
                       <div className="flex flex-col gap-2">
                         <div className="flex justify-between text-[11px] font-black text-green-400 uppercase tracking-widest"><span>像素粒径 / Pixel Size</span><span>{pixelSize}PX</span></div>
-                        <input type="range" min="1" max="40" value={pixelSize} onChange={e => setPixelSize(Number(e.target.value))} className="w-full accent-green-500 h-1.5" />
+                        <input 
+                          type="range" min="1" max="40" 
+                          value={pixelSize} 
+                          onChange={e => setPixelSize(Number(e.target.value))} 
+                          className="custom-slider w-full mt-1 mb-1" 
+                          style={{ background: `linear-gradient(to right, #4ade80 ${((pixelSize - 1) / 39) * 100}%, #3f3f46 ${((pixelSize - 1) / 39) * 100}%)` }}
+                        />
                       </div>
                       <div className="flex flex-col gap-3 mt-1">
                         {[
-                          { label: '亮度 / Brightness', val: brightness, set: setBrightness, min: -100, max: 100 },
-                          { label: '对比度 / Contrast', val: contrast, set: setContrast, min: -100, max: 100 },
-                          { label: '抖动 / Dither', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 }
+                          { id: 'slider-brightness', displayId: 'display-brightness', label: '亮度 / Brightness', val: brightness, set: setBrightness, min: -100, max: 100 },
+                          { id: 'slider-contrast', displayId: 'display-contrast', label: '对比度 / Contrast', val: contrast, set: setContrast, min: -100, max: 100 },
+                          { id: 'slider-dither', displayId: 'display-dither', label: '抖动 / Dither', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 }
                         ].map(item => (
                           <div key={item.label} className="flex flex-col gap-1.5 text-left">
-                            <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest text-left"><span>{item.label}</span><span>{item.val}</span></div>
-                            <input type="range" min={item.min} max={item.max} step={item.step || 1} value={item.val} onChange={e => item.set(Number(e.target.value))} className="w-full accent-green-500 h-1" />
+                            <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest text-left">
+                              <span>{item.label}</span>
+                              <span id={item.displayId}>{item.val}</span>
+                            </div>
+                            <input 
+                                id={item.id}
+                                type="range" 
+                                min={item.min} 
+                                max={item.max} 
+                                step={item.step || 1} 
+                                value={item.val} 
+                                onChange={e => item.set(Number(e.target.value))} 
+                                onMouseDown={() => { if (item.id === 'slider-contrast') isDraggingRef.current = true; }}
+                                onMouseUp={() => { if (item.id === 'slider-contrast') isDraggingRef.current = false; }}
+                                onTouchStart={() => { if (item.id === 'slider-contrast') isDraggingRef.current = true; }}
+                                onTouchEnd={() => { if (item.id === 'slider-contrast') isDraggingRef.current = false; }}
+                                className="custom-slider w-full mt-1" 
+                                style={{ background: `linear-gradient(to right, #4ade80 ${((item.val - item.min) / (item.max - item.min)) * 100}%, #3f3f46 ${((item.val - item.min) / (item.max - item.min)) * 100}%)` }}
+                            />
                           </div>
                         ))}
                       </div>
@@ -383,27 +728,46 @@
                 </div>
               )}
 
-              {/* 预览显示区：移除外边框 */}
+              {/* 预览显示区 */}
               <div 
                 className={`flex-1 ${containerClass} bg-[#000000] flex flex-col items-center justify-center relative p-8`} 
                 onDoubleClick={() => !imageObj && fileInputRef.current?.click()}
               >
                 <div className="absolute top-6 left-6 flex items-center gap-3 z-10 text-left">
-                    <div className={`w-2.5 h-2.5 rounded-full ${imageObj ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-pulse' : 'bg-zinc-900'}`}></div>
-                    <div className="text-[11px] text-zinc-600 font-black uppercase tracking-[0.2em] leading-none text-left">显示输出 / Live Output</div>
+                    <div className={`w-2.5 h-2.5 rounded-full ${
+                      !imageObj ? 'bg-zinc-900' : 
+                      isRecording ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)] animate-fast-blink' : 
+                      (isLabMode ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-pulse')
+                    }`}></div>
+                    <div className="text-[11px] text-zinc-600 font-black uppercase tracking-[0.2em] leading-none text-left">
+                      {isRecording ? 'RECORDING VIDEO...' : '显示输出 / Live Output'}
+                    </div>
                 </div>
                 
-                {imageObj && (
+                {!imageObj ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center cursor-pointer group">
+                    <div className="relative inline-block transition-transform group-hover:scale-105 duration-500">
+                      <p className="text-[22px] font-bold text-zinc-400 tracking-wide leading-none mb-[14px]">
+                        请提供一张图像
+                      </p>
+                      <div className="flex justify-between text-[13px] font-medium text-zinc-600 leading-none">
+                        {"点击上方按钮或双击上传".split('').map((char, i) => (
+                          <span key={i}>{char}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center animate-pop-in">
                     <div className="flex-1 flex items-center justify-center w-full min-h-0 mt-6">
                       <canvas ref={canvasRef} className="max-w-full max-h-full rounded-sm shadow-[0_30px_80px_rgba(0,0,0,0.9)]" />
                     </div>
                     <div className="mt-8 mb-2 flex flex-col items-center gap-2 text-center flex-shrink-0">
                         <p className="text-[12px] text-zinc-400 font-black uppercase tracking-[0.2em]">
-                          {isRandomized ? 'Dice Mode (Experimental)' : (mode === 'GB' ? 'Original Game Boy Mode (DMG-01)' : 'Game Boy Color Mode (CGB-001)')}
+                          {isLabMode ? 'Lab Mode (Dynamic Signal)' : (isRandomized ? 'Dice Mode (Experimental)' : (mode === 'GB' ? 'Original Game Boy Mode (DMG-01)' : 'Game Boy Color Mode (CGB-001)'))}
                         </p>
                         <p className="text-[9px] text-zinc-700 font-bold uppercase tracking-[0.3em]">
-                          {imageObj.width} X {imageObj.height} {isRandomized ? 'STOCHASTIC RENDER' : 'DOT MATRIX DISPLAY'}
+                          {imageObj.width} X {imageObj.height} {isLabMode ? 'GLITCH FX RENDER' : (isRandomized ? 'STOCHASTIC RENDER' : 'DOT MATRIX DISPLAY')}
                         </p>
                     </div>
                   </div>
