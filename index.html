@@ -280,7 +280,7 @@
                     <span className="text-sm font-bold text-[#07c160] tracking-widest">微信支付</span>
                   </div>
                   <div className="flex flex-col items-center bg-zinc-950 p-5 rounded-3xl w-[240px]">
-                    <div className="w-full aspect-square bg-white rounded-2xl overflow-hidden mb-4"><img src="others/alipay.jpg" alt="支付宝" className="w-full h-full object-cover" /></div>
+                    <div className="w-full aspect-square bg-white rounded-xl flex items-center justify-center overflow-hidden mb-4"><img src="others/alipay.jpg" alt="支付宝" className="w-full h-full object-cover" /></div>
                     <span className="text-sm font-bold text-[#1677ff] tracking-widest">支付宝</span>
                   </div>
                 </div>
@@ -288,9 +288,8 @@
             </div>
           )}
 
-          {/* 窗口缩放核心逻辑：w-[75vw] 确保占据画面的 70% 左右，整体居中 */}
           <div className="w-[75vw] max-w-5xl flex flex-col gap-5 animate-pop-in">
-            {/* 顶栏 */}
+            {/* 顶栏：移除外边框 */}
             <div className={`${containerClass} p-4 flex items-center justify-between gap-6 flex-shrink-0`}>
               <div className="flex items-center gap-5 text-left">
                 <img src="others/xieyoujune.jpg" alt="Avatar" className="user-avatar" onError={(e) => e.target.style.display='none'} />
@@ -315,10 +314,8 @@
               </div>
             </div>
 
-            {/* 工作区：压缩最大高度，维持紧凑比例 */}
             <div className="flex gap-5 items-stretch justify-center h-full min-h-[480px] lg:max-h-[540px] xl:max-h-[580px]">
-              
-              {/* 控制台：缩小尺寸 */}
+              {/* 控制台：移除所有内部模块边框 */}
               {imageObj && (
                 <div className={`w-[320px] xl:w-[350px] flex-shrink-0 ${containerClass} p-4 flex flex-col justify-between overflow-hidden animate-pop-in`}>
                   
@@ -362,7 +359,7 @@
                     <div className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-3 text-left">调色板 / Palettes</div>
                     <div className="grid grid-cols-2 gap-2 text-left">
                       {PALETTES.map((p, i) => (
-                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-2 px-3 py-2 rounded-xl transition-all ${paletteIdx === i ? 'bg-zinc-800 ring-1 ring-green-500 text-green-400' : 'bg-black/30 hover:bg-zinc-800 text-zinc-500'}`}>
+                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-2 px-3 py-2 rounded-xl transition-all ${paletteIdx === i ? 'bg-zinc-800 text-green-400' : 'bg-black/30 hover:bg-zinc-800 text-zinc-500'}`}>
                           <span className="text-[9px] font-black uppercase tracking-tighter truncate text-left">{p.name.split(' (')[0]}</span>
                           <div className="flex h-1 w-full rounded-full overflow-hidden shadow-inner">
                             {p.colors.map(c => <div key={c} style={{backgroundColor: c}} className="flex-1" />)}
@@ -386,7 +383,7 @@
                 </div>
               )}
 
-              {/* 预览显示区：纯黑底色，维持绝对居中 */}
+              {/* 预览显示区：移除外边框 */}
               <div 
                 className={`flex-1 ${containerClass} bg-[#000000] flex flex-col items-center justify-center relative p-8`} 
                 onDoubleClick={() => !imageObj && fileInputRef.current?.click()}
@@ -414,7 +411,6 @@
               </div>
             </div>
 
-            {/* 页脚：保持在一屏内 */}
             <footer className="py-2 text-center opacity-30 hover:opacity-100 transition-opacity">
                <p className="text-[9px] text-zinc-500 font-bold tracking-widest uppercase">
                  感谢 olivvybee，愿天下开源作者一生平安快乐。原作者主页：<a href="https://ko-fi.com/olivvybee" target="_blank" className="underline hover:text-green-400">https://ko-fi.com/olivvybee</a>
