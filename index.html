@@ -5,17 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>GB Gen 图像实验室</title>
   
-  <!-- 基础 Favicon -->
-  <link rel="icon" href="others/icon.png?v=20240329" type="image/png">
-  
-  <!-- 苹果设备专用：iOS 极致去白边，强制 1:1 物理拉伸 -->
-  <link rel="apple-touch-icon-precomposed" href="others/icon.png?v=20240329">
-  <link rel="apple-touch-icon" href="others/icon.png?v=20240329">
-  
-  <!-- 系统颜色强制同步 -->
   <meta name="theme-color" content="#0c0c0c">
   
-  <!-- 苹果 WebApp 规范：强制沉浸式全屏 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="GB Gen">
@@ -66,7 +57,6 @@
       animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    /* 完全扁平化自定义滑块 */
     .custom-slider {
       -webkit-appearance: none;
       appearance: none;
@@ -125,6 +115,41 @@
     .animate-fast-blink {
       animation: fastBlink 0.3s ease-in-out infinite;
     }
+
+    /* 新增：咖啡杯专属脉动渐变 */
+    @keyframes coffee-pulse {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .btn-coffee-lab {
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-coffee-lab::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(-45deg, #1677ff, #07c160, #1677ff, #07c160);
+      background-size: 400% 400%;
+      opacity: 0;
+      z-index: -1;
+      transition: opacity 0.6s ease;
+    }
+
+    .btn-coffee-lab:hover::before {
+      opacity: 1;
+      animation: coffee-pulse 8s ease infinite;
+    }
+
+    .btn-coffee-lab:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(22, 119, 255, 0.2);
+    }
   </style>
 </head>
 <body>
@@ -132,42 +157,6 @@
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
-
-    const injectManifest = () => {
-      const manifest = {
-        name: "GB Gen 图像实验室",
-        short_name: "GB Gen",
-        start_url: "./", 
-        display: "standalone", 
-        background_color: "#0c0c0c",
-        theme_color: "#0c0c0c",
-        icons: [
-          { 
-            src: "others/icon.png?v=20240329", 
-            sizes: "180x180", 
-            type: "image/png",
-            purpose: "any" 
-          },
-          { 
-            src: "others/icon.png?v=20240329", 
-            sizes: "192x192", 
-            type: "image/png",
-            purpose: "any" 
-          },
-          { 
-            src: "others/icon.png?v=20240329", 
-            sizes: "512x512", 
-            type: "image/png",
-            purpose: "any" 
-          }
-        ]
-      };
-      const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-      const link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = URL.createObjectURL(blob);
-      document.head.appendChild(link);
-    };
 
     const registerServiceWorker = () => {
       if ('serviceWorker' in navigator) {
@@ -244,6 +233,8 @@
       const [brightness, setBrightness] = useState(-21);
       const [contrast, setContrast] = useState(-16);
       const [ditherStrength, setDitherStrength] = useState(0.1);
+      const [hue, setHue] = useState(0); 
+      const [saturation, setSaturation] = useState(1);
       const [mode, setMode] = useState('GB'); 
       const [userDisplayName, setUserDisplayName] = useState("@谢有君");
       const [showDonationModal, setShowDonationModal] = useState(false);
@@ -267,6 +258,8 @@
       const contrastRef = useRef(contrast);              
       const dynamicContrastRef = useRef(contrast);       
       const ditherStrengthRef = useRef(ditherStrength);
+      const hueRef = useRef(hue);
+      const saturationRef = useRef(saturation);
       const modeRef = useRef(mode);
       const isLabModeRef = useRef(isLabMode);
       
@@ -277,6 +270,8 @@
       useEffect(() => { paletteIdxRef.current = paletteIdx; }, [paletteIdx]);
       useEffect(() => { brightnessRef.current = brightness; }, [brightness]);
       useEffect(() => { ditherStrengthRef.current = ditherStrength; }, [ditherStrength]);
+      useEffect(() => { hueRef.current = hue; }, [hue]);
+      useEffect(() => { saturationRef.current = saturation; }, [saturation]);
       useEffect(() => { modeRef.current = mode; }, [mode]);
       useEffect(() => { isLabModeRef.current = isLabMode; }, [isLabMode]);
       
@@ -288,7 +283,6 @@
       }, [contrast]);
 
       useEffect(() => {
-        injectManifest();
         registerServiceWorker();
         const tipTimer = setInterval(() => {
           setCurrentTipIdx(prev => (prev + 1) % JUNE_TIPS.length);
@@ -309,10 +303,12 @@
       };
 
       const handleRandomize = () => {
-        setPrevSettings({ pixelSize, paletteIdx, brightness, contrast, ditherStrength });
+        setPrevSettings({ pixelSize, paletteIdx, brightness, contrast, ditherStrength, hue, saturation });
         setPixelSize(1);
         setDitherStrength(0);
         setPaletteIdx(Math.floor(Math.random() * PALETTES.length));
+        setHue(Math.floor(Math.random() * 360));
+        setSaturation(Math.random() * 2);
         setIsRandomized(true);
       };
 
@@ -323,6 +319,8 @@
           setBrightness(prevSettings.brightness);
           setContrast(prevSettings.contrast);
           setDitherStrength(prevSettings.ditherStrength);
+          setHue(prevSettings.hue || 0);
+          setSaturation(prevSettings.saturation !== undefined ? prevSettings.saturation : 1);
           setIsRandomized(false);
         }
       };
@@ -346,6 +344,8 @@
         const activeContrast = dynamicContrastRef.current; 
         const bBright = brightnessRef.current;
         const dStr = ditherStrengthRef.current;
+        const hVal = hueRef.current;
+        const sVal = saturationRef.current;
         const pIdx = paletteIdxRef.current;
         const curMode = modeRef.current;
 
@@ -361,8 +361,27 @@
         const data = imgData.data;
         const factor = (259 * (activeContrast + 255)) / (255 * (259 - activeContrast));
         
+        const angle = hVal * Math.PI / 180;
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
+        const m = [
+            0.213 + cosA * 0.787 - sinA * 0.213, 0.715 - cosA * 0.715 - sinA * 0.715, 0.072 - cosA * 0.072 + sinA * 0.928,
+            0.213 - cosA * 0.213 + sinA * 0.143, 0.715 + cosA * 0.285 + sinA * 0.140, 0.072 - cosA * 0.072 - sinA * 0.283,
+            0.213 - cosA * 0.213 - sinA * 0.787, 0.715 - cosA * 0.715 + sinA * 0.715, 0.072 + cosA * 0.928 + sinA * 0.072
+        ];
+
         for (let i = 0; i < data.length; i += 4) {
           let r = data[i], g = data[i+1], b = data[i+2];
+          
+          let rx = r * m[0] + g * m[1] + b * m[2];
+          let gx = r * m[3] + g * m[4] + b * m[5];
+          let bx = r * m[6] + g * m[7] + b * m[8];
+
+          const gray = 0.299 * rx + 0.587 * gx + 0.114 * bx;
+          r = gray + (rx - gray) * sVal;
+          g = gray + (gx - gray) * sVal;
+          b = gray + (bx - gray) * sVal;
+
           r = factor * (r - 128) + 128 + bBright;
           g = factor * (g - 128) + 128 + bBright;
           b = factor * (b - 128) + 128 + bBright;
@@ -441,19 +460,19 @@
           if (Math.random() < 0.3) {
               let drawYOffset = 0;
               if (Math.random() < 0.2) { 
-                 drawYOffset = Math.floor((Math.random() - 0.5) * 10) * currentPixelSize;
-                 ctx.fillStyle = '#000';
-                 ctx.fillRect(0, 0, w, h);
-                 ctx.drawImage(pCanvas, 0, drawYOffset);
+                  drawYOffset = Math.floor((Math.random() - 0.5) * 10) * currentPixelSize;
+                  ctx.fillStyle = '#000';
+                  ctx.fillRect(0, 0, w, h);
+                  ctx.drawImage(pCanvas, 0, drawYOffset);
               }
               if (Math.random() < 0.5) { 
-                 const numSlices = Math.floor(Math.random() * 4) + 1;
-                 for(let i = 0; i < numSlices; i++) {
-                     const sliceY = Math.floor((Math.random() * h) / currentPixelSize) * currentPixelSize;
-                     const sliceH = Math.floor((Math.random() * (h * 0.1)) / currentPixelSize) * currentPixelSize + currentPixelSize;
-                     const shiftX = Math.floor((Math.random() - 0.5) * 15) * currentPixelSize; 
-                     ctx.drawImage(pCanvas, 0, sliceY, w, sliceH, shiftX, sliceY + drawYOffset, w, sliceH);
-                 }
+                  const numSlices = Math.floor(Math.random() * 4) + 1;
+                  for(let i = 0; i < numSlices; i++) {
+                      const sliceY = Math.floor((Math.random() * h) / currentPixelSize) * currentPixelSize;
+                      const sliceH = Math.floor((Math.random() * (h * 0.1)) / currentPixelSize) * currentPixelSize + currentPixelSize;
+                      const shiftX = Math.floor((Math.random() - 0.5) * 15) * currentPixelSize; 
+                      ctx.drawImage(pCanvas, 0, sliceY, w, sliceH, shiftX, sliceY + drawYOffset, w, sliceH);
+                  }
               }
               if (Math.random() < 0.2) { 
                   ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
@@ -469,7 +488,7 @@
            dynamicContrastRef.current = contrast;
         }
         processImage(); 
-      }, [imageObj, pixelSize, paletteIdx, brightness, contrast, ditherStrength, mode]);
+      }, [imageObj, pixelSize, paletteIdx, brightness, contrast, ditherStrength, hue, saturation, mode]);
 
       useEffect(() => {
         if (isLabMode && imageObj) {
@@ -487,7 +506,7 @@
                const pct = ((contrastRef.current - (-100)) / 200) * 100;
                slider.style.background = `linear-gradient(to right, #4ade80 ${pct}%, #3f3f46 ${pct}%)`;
            }
-           if (display) display.innerText = Math.floor(contrastRef.current);
+           if (display) display.innerText = Math.floor(dynamicContrastRef.current);
         }
         return () => {
            if (animationRef.current) cancelAnimationFrame(animationRef.current);
@@ -571,7 +590,6 @@
             </div>
           )}
 
-          {/* 桌面居中容器：占画面 70% 左右 */}
           <div className="w-[75vw] max-w-5xl flex flex-col gap-5 animate-pop-in">
             {/* 顶栏 */}
             <div className={`${containerClass} p-4 flex items-center justify-between gap-6 flex-shrink-0`}>
@@ -600,12 +618,18 @@
                     <><IconDownload size={16} />导出</>
                   )}
                 </button>
-                <button onClick={() => setShowDonationModal(true)} className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl flex items-center transition-all"><IconCoffee size={18} /></button>
+                {/* 核心改动：咖啡杯专属脉动渐变逻辑 */}
+                <button 
+                  onClick={() => setShowDonationModal(true)} 
+                  className="px-4 py-2.5 bg-zinc-800 text-zinc-100 rounded-xl flex items-center btn-coffee-lab"
+                >
+                  <IconCoffee size={18} />
+                </button>
               </div>
             </div>
 
             <div className="flex gap-5 items-stretch justify-center h-full min-h-[480px] lg:max-h-[540px] xl:max-h-[580px]">
-              {/* 控制台：修改 justify-between 为 justify-start，强制让方块向上挪并保持固定间距 */}
+              {/* 控制台 */}
               {imageObj && (
                 <div className={`w-[320px] xl:w-[350px] flex-shrink-0 ${containerClass} p-4 flex flex-col justify-start gap-4 overflow-hidden animate-pop-in`}>
                   
@@ -624,7 +648,7 @@
                             <IconFlask size={16} />
                           </button>
                       </div>
-                      <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2.5 bg-black/30 hover:bg-zinc-800 rounded-xl transition-all text-zinc-500 hover:text-green-400">
+                      <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2.5 bg-black/30 hover:bg-zinc-800 rounded-xl transition-all text-zinc-500 hover:text-green-400 text-center flex items-center justify-center">
                         {isRandomized ? <IconUndo size={18} /> : <IconDice size={18} />}
                       </button>
                     </div>
@@ -632,27 +656,44 @@
 
                   {/* 卡片2：参数控制 */}
                   <div className={`${cardClass} p-4`}>
-                    <div className="flex flex-col gap-4 text-left">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex justify-between text-[11px] font-black text-green-400 uppercase tracking-widest"><span>像素粒径 / Pixel Size</span><span>{pixelSize}PX</span></div>
+                    <div className="flex flex-col gap-3.5 text-left"> 
+                      
+                      {/* 1. 像素粒径 */}
+                      <div className="flex flex-col gap-1.5 text-left">
+                        <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest text-left">
+                          <span>像素粒径 / Pixel Size</span>
+                          <span>{pixelSize}PX</span>
+                        </div>
                         <input 
                           type="range" min="1" max="40" 
                           value={pixelSize} 
                           onChange={e => setPixelSize(Number(e.target.value))} 
-                          className="custom-slider w-full mt-1 mb-1" 
+                          className="custom-slider w-full" 
                           style={{ background: `linear-gradient(to right, #4ade80 ${((pixelSize - 1) / 39) * 100}%, #3f3f46 ${((pixelSize - 1) / 39) * 100}%)` }}
                         />
                       </div>
-                      <div className="flex flex-col gap-3 mt-1">
-                        {[
-                          { id: 'slider-brightness', displayId: 'display-brightness', label: '亮度 / Brightness', val: brightness, set: setBrightness, min: -100, max: 100 },
-                          { id: 'slider-contrast', displayId: 'display-contrast', label: '对比度 / Contrast', val: contrast, set: setContrast, min: -100, max: 100 },
-                          { id: 'slider-dither', displayId: 'display-dither', label: '抖动 / Dither', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 }
-                        ].map(item => (
-                          <div key={item.label} className="flex flex-col gap-1.5 text-left">
+
+                      {/* 2-6. 遍历渲染其他参数 */}
+                      {[
+                        { id: 'slider-brightness', displayId: 'display-brightness', label: '亮度 / Brightness', val: brightness, set: setBrightness, min: -100, max: 100 },
+                        { id: 'slider-contrast', displayId: 'display-contrast', label: '对比度 / Contrast', val: contrast, set: setContrast, min: -100, max: 100 },
+                        { id: 'slider-dither', displayId: 'display-dither', label: '抖动 / Dither', val: ditherStrength, set: setDitherStrength, min: 0, max: 2, step: 0.1 },
+                        { id: 'slider-hue', displayId: 'display-hue', label: '色相 / Hue', val: hue, set: setHue, min: 0, max: 360 },
+                        { id: 'slider-saturation', displayId: 'display-saturation', label: '饱和度 / Saturation', val: saturation, set: setSaturation, min: 0, max: 2, step: 0.1 }
+                      ].map(item => {
+                        const isColorControl = item.id === 'slider-hue' || item.id === 'slider-saturation';
+                        const isDisabled = isColorControl && mode === 'GB';
+                        
+                        return (
+                          <div 
+                            key={item.label} 
+                            className={`flex flex-col gap-1.5 text-left transition-all duration-300 ${
+                              isDisabled ? 'opacity-20 pointer-events-none' : 'opacity-100'
+                            }`}
+                          >
                             <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest text-left">
                               <span>{item.label}</span>
-                              <span id={item.displayId}>{item.val}</span>
+                              <span id={item.displayId}>{item.id === 'slider-saturation' ? item.val.toFixed(1) : item.val}</span>
                             </div>
                             <input 
                                 id={item.id}
@@ -661,23 +702,23 @@
                                 max={item.max} 
                                 step={item.step || 1} 
                                 value={item.val} 
+                                disabled={isDisabled}
                                 onChange={e => item.set(Number(e.target.value))} 
                                 onMouseDown={() => { if (item.id === 'slider-contrast') isDraggingRef.current = true; }}
                                 onMouseUp={() => { if (item.id === 'slider-contrast') isDraggingRef.current = false; }}
                                 onTouchStart={() => { if (item.id === 'slider-contrast') isDraggingRef.current = true; }}
                                 onTouchEnd={() => { if (item.id === 'slider-contrast') isDraggingRef.current = false; }}
-                                className="custom-slider w-full mt-1" 
+                                className="custom-slider w-full" 
                                 style={{ background: `linear-gradient(to right, #4ade80 ${((item.val - item.min) / (item.max - item.min)) * 100}%, #3f3f46 ${((item.val - item.min) / (item.max - item.min)) * 100}%)` }}
                             />
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* 卡片3：调色板 */}
+                  {/* 卡片3：调色板 - 已去掉小标题 */}
                   <div className={`${cardClass} p-4 transition-opacity duration-500 ${mode === 'GBC' ? 'opacity-20 pointer-events-none grayscale' : 'opacity-100'}`}>
-                    <div className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-3 text-left">调色板 / Palettes</div>
                     <div className="grid grid-cols-2 gap-2 text-left">
                       {PALETTES.map((p, i) => (
                         <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-2 px-3 py-2 rounded-xl transition-all ${paletteIdx === i ? 'bg-zinc-800 ring-1 ring-green-500 text-green-400' : 'bg-black/30 hover:bg-zinc-800 text-zinc-500'}`}>
@@ -689,70 +730,77 @@
                       ))}
                     </div>
                   </div>
-
-                  {/* 卡片4：小提示 - 现在的间距会紧跟在调色板下方 */}
-                  <div className={`${cardClass} p-4`}>
-                    <div className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-1 text-left">有君建议 / June's Tips</div>
-                    <div className="h-[20px] relative overflow-hidden text-left">
-                      {JUNE_TIPS.map((tip, index) => (
-                        <div key={index} className={`absolute left-0 right-0 top-0 text-[10px] font-bold text-zinc-600 leading-tight transition-all duration-1000 ${currentTipIdx === index ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}>
-                          {tip}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               )}
 
               {/* 预览显示区 */}
               <div 
-                className={`flex-1 ${containerClass} bg-[#000000] flex flex-col items-center justify-center relative p-8`} 
+                className={`flex-1 ${containerClass} bg-[#000000] flex flex-col relative overflow-hidden`} 
                 onDoubleClick={() => !imageObj && fileInputRef.current?.click()}
               >
-                <div className="absolute top-6 left-6 flex items-center gap-3 z-10 text-left">
-                    <div className={`w-2.5 h-2.5 rounded-full ${
-                      !imageObj ? 'bg-zinc-900' : 
-                      isRecording ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)] animate-fast-blink' : 
-                      (isLabMode ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-pulse')
-                    }`}></div>
-                    <div className="text-[11px] text-zinc-600 font-black uppercase tracking-[0.2em] leading-none text-left">
-                      {isRecording ? 'RECORDING VIDEO...' : '显示输出 / Live Output'}
-                    </div>
-                </div>
-                
-                {!imageObj ? (
-                  <div className="w-full h-full flex flex-col items-center justify-center cursor-pointer group">
-                    <div className="relative inline-block transition-transform group-hover:scale-105 duration-500">
-                      <p className="text-[22px] font-bold text-zinc-400 tracking-wide leading-none mb-[14px]">
-                        请提供一张图像
-                      </p>
-                      <div className="flex justify-between text-[13px] font-medium text-zinc-600 leading-none">
-                        {"点击上方按钮或双击上传".split('').map((char, i) => (
-                          <span key={i}>{char}</span>
-                        ))}
+                {/* 顶部状态条 */}
+                <div className="h-14 flex items-center px-6 shrink-0 z-20">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        !imageObj ? 'bg-zinc-900' : 
+                        isRecording ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)] animate-fast-blink' : 
+                        (isLabMode ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-pulse')
+                      }`}></div>
+                      <div className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.2em] leading-none text-left">
+                        {isRecording ? 'RECORDING VIDEO...' : '显示输出 / Live Output'}
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center animate-pop-in">
-                    <div className="flex-1 flex items-center justify-center w-full min-h-0 mt-6">
-                      <canvas ref={canvasRef} className="max-w-full max-h-full rounded-sm shadow-[0_30px_80px_rgba(0,0,0,0.9)]" />
+                </div>
+
+                {/* 核心显示区 */}
+                <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center px-8 relative z-10 text-left">
+                  {!imageObj ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center cursor-pointer group text-center">
+                      <div className="relative inline-block transition-transform group-hover:scale-105 duration-500">
+                        <p className="text-[22px] font-bold text-zinc-400 tracking-wide leading-none mb-[14px]">请提供一张图像</p>
+                        <div className="flex justify-between text-[13px] font-medium text-zinc-600 leading-none text-left">
+                          {"点击上方按钮或双击上传".split('').map((char, i) => (
+                            <span key={i}>{char}</span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <div className="mt-8 mb-2 flex flex-col items-center gap-2 text-center flex-shrink-0">
-                        <p className="text-[12px] text-zinc-400 font-black uppercase tracking-[0.2em]">
-                          {isLabMode ? 'Lab Mode (Dynamic Signal)' : (isRandomized ? 'Dice Mode (Experimental)' : (mode === 'GB' ? 'Original Game Boy Mode (DMG-01)' : 'Game Boy Color Mode (CGB-001)'))}
-                        </p>
-                        <p className="text-[9px] text-zinc-700 font-bold uppercase tracking-[0.3em]">
-                          {imageObj.width} X {imageObj.height} {isLabMode ? 'GLITCH FX RENDER' : (isRandomized ? 'STOCHASTIC RENDER' : 'DOT MATRIX DISPLAY')}
-                        </p>
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full animate-pop-in">
+                      <canvas 
+                        ref={canvasRef} 
+                        className="max-w-full max-h-full rounded-sm shadow-[0_30px_80px_rgba(0,0,0,0.9)] object-contain" 
+                      />
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+
+                {/* 底部贴士栏 */}
+                <div className="h-14 flex items-center px-8 shrink-0 z-20 pointer-events-none text-left">
+                  {imageObj && (
+                    <div className="w-full flex justify-between items-center opacity-40 hover:opacity-100 transition-opacity duration-500">
+                      <div className="flex flex-col gap-0.5 text-left">
+                        <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest text-left">有君建议 / Hint</div>
+                        <div className="h-[12px] relative overflow-hidden min-w-[200px] text-left">
+                          {JUNE_TIPS.map((tip, index) => (
+                            <div key={index} className={`absolute left-0 right-0 top-0 text-[9px] font-bold text-green-400/80 leading-none transition-all duration-1000 ${currentTipIdx === index ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}>
+                              {tip}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right flex flex-col gap-0.5 text-left">
+                        <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest text-right">系统状态 / Status</div>
+                        <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.1em] text-right">Signal: Nominal</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             <footer className="py-2 text-center opacity-30 hover:opacity-100 transition-opacity">
-               <p className="text-[9px] text-zinc-500 font-bold tracking-widest uppercase">
+               <p className="text-[9px] text-zinc-500 font-bold tracking-widest uppercase text-center">
                  感谢 olivvybee，愿天下开源作者一生平安快乐。原作者主页：<a href="https://ko-fi.com/olivvybee" target="_blank" className="underline hover:text-green-400">https://ko-fi.com/olivvybee</a>
                </p>
             </footer>
