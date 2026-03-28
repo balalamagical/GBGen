@@ -69,10 +69,10 @@
       border-radius: 9999px;
       outline: none;
       border: none;
-      margin: 0; /* 消除默认外边距影响 */
+      margin: 0; 
     }
 
-    /* Chrome/Safari/Edge 轨道：必须显式声明高度，否则 thumb 的偏移会计算错误 */
+    /* Chrome/Safari/Edge 轨道 */
     .custom-slider::-webkit-slider-runnable-track {
       width: 100%;
       height: 4px;
@@ -86,14 +86,14 @@
     .custom-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 10px; /* 与"显示输出"的指示灯保持一致的尺寸 (10px) */
+      width: 10px; 
       height: 10px;
       border-radius: 50%;
       background: #4ade80;
       cursor: pointer;
       border: none;
       box-shadow: none;
-      margin-top: -3px; /* 完美居中公式：(轨道高度 4px - 滑块高度 10px) / 2 = -3px */
+      margin-top: -3px; 
     }
 
     /* Firefox 轨道 */
@@ -115,7 +115,6 @@
       cursor: pointer;
       border: none;
       box-shadow: none;
-      /* Firefox 原生自带垂直居中，不需要 margin-top */
     }
 
     /* 急促闪烁的红灯动画，用于录像反馈 */
@@ -142,7 +141,14 @@
         display: "standalone", 
         background_color: "#171717",
         theme_color: "#171717",
-        icons: [{ src: "others/icon.png", sizes: "512x512", type: "image/png" }]
+        icons: [
+          { 
+            src: "others/icon.png", 
+            sizes: "512x512", 
+            type: "image/png",
+            purpose: "any maskable" // 关键：指定图标为可裁切，消除PWA白边
+          }
+        ]
       };
       const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
       const link = document.createElement('link');
@@ -239,7 +245,6 @@
       const canvasRef = useRef(null);
       const fileInputRef = useRef(null);
       
-      // ========== 高性能动画与防闭包陷阱的 Ref ==========
       const processedCanvasRef = useRef(null);
       const animationRef = useRef(null);
       
@@ -247,16 +252,14 @@
       const pixelSizeRef = useRef(pixelSize);
       const paletteIdxRef = useRef(paletteIdx);
       const brightnessRef = useRef(brightness);
-      const contrastRef = useRef(contrast);              // 用户设定的基准对比度
-      const dynamicContrastRef = useRef(contrast);       // 引擎内部动态计算的对比度 (供Lab模式抖动使用)
+      const contrastRef = useRef(contrast);              
+      const dynamicContrastRef = useRef(contrast);       
       const ditherStrengthRef = useRef(ditherStrength);
       const modeRef = useRef(mode);
       const isLabModeRef = useRef(isLabMode);
       
-      // 滑块拖拽保护锁：防止底层DOM操作与用户拖拽冲突
       const isDraggingRef = useRef(false);
 
-      // 同步最新状态到 Refs
       useEffect(() => { imageObjRef.current = imageObj; }, [imageObj]);
       useEffect(() => { pixelSizeRef.current = pixelSize; }, [pixelSize]);
       useEffect(() => { paletteIdxRef.current = paletteIdx; }, [paletteIdx]);
@@ -265,7 +268,6 @@
       useEffect(() => { modeRef.current = mode; }, [mode]);
       useEffect(() => { isLabModeRef.current = isLabMode; }, [isLabMode]);
       
-      // 用户改变滑块时，同步基准值；若不在Lab模式，直接覆盖渲染值
       useEffect(() => { 
           contrastRef.current = contrast; 
           if (!isLabModeRef.current) {
@@ -313,7 +315,6 @@
         }
       };
 
-      // 核心处理逻辑：从 Refs 读取参数，仅更新缓存画布，并按需推送到主画布
       const processImage = () => {
         const img = imageObjRef.current;
         const canvas = canvasRef.current;
@@ -329,9 +330,8 @@
         canvas.width = width; canvas.height = height;
         pCanvas.width = width; pCanvas.height = height;
         
-        // 从 Refs 取当前应用值
         const pSize = pixelSizeRef.current;
-        const activeContrast = dynamicContrastRef.current; // 使用动态波动的对比度
+        const activeContrast = dynamicContrastRef.current; 
         const bBright = brightnessRef.current;
         const dStr = ditherStrengthRef.current;
         const pIdx = paletteIdxRef.current;
@@ -378,7 +378,6 @@
         pCtx.clearRect(0, 0, width, height);
         pCtx.drawImage(offscreen, 0, 0, logicalWidth, logicalHeight, 0, 0, width, height);
 
-        // 如果没有开启实验室模式，直接将缓存结果输出至主屏幕
         if (!isLabModeRef.current) {
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, width, height);
@@ -387,29 +386,22 @@
         return true;
       };
 
-      // 故障动画循环（Lab Mode 专属引擎）
       const glitchLoop = () => {
           if (!isLabModeRef.current) return;
           const canvas = canvasRef.current;
           if (!canvas || !imageObjRef.current) return;
 
-          // ==========================================
-          // 核心机制：对比度在设定值 +0 到 +20 之间高频波动
-          // ==========================================
           const baseC = contrastRef.current;
           let needsUpdate = false;
           
           if (Math.random() < 0.25) { 
-              // 25% 概率触发电压（对比度）波动飙升
               dynamicContrastRef.current = baseC + (Math.random() * 20);
               needsUpdate = true;
           } else if (Math.random() < 0.1) {
-              // 10% 概率恢复正常电压（对比度）
               dynamicContrastRef.current = baseC;
               needsUpdate = true;
           }
 
-          // 核心！联动 UI 滑块的自动抽搐（且避开用户正在手动拖拽时的冲突）
           if (needsUpdate) {
               processImage(); 
               if (!isDraggingRef.current) {
@@ -432,20 +424,16 @@
           const h = canvas.height;
           const currentPixelSize = pixelSizeRef.current;
 
-          // 先画入当前的底层渲染结果 (带着波动的对比度)
           ctx.drawImage(pCanvas, 0, 0);
 
-          // 随机注入游戏机故障视觉机理
           if (Math.random() < 0.3) {
               let drawYOffset = 0;
-              // 1. 垂直跳帧 (V-Sync Jump)
               if (Math.random() < 0.2) { 
                  drawYOffset = Math.floor((Math.random() - 0.5) * 10) * currentPixelSize;
                  ctx.fillStyle = '#000';
                  ctx.fillRect(0, 0, w, h);
                  ctx.drawImage(pCanvas, 0, drawYOffset);
               }
-              // 2. 图像撕裂与水平切片 (Horizontal Tearing)
               if (Math.random() < 0.5) { 
                  const numSlices = Math.floor(Math.random() * 4) + 1;
                  for(let i = 0; i < numSlices; i++) {
@@ -455,7 +443,6 @@
                      ctx.drawImage(pCanvas, 0, sliceY, w, sliceH, shiftX, sliceY + drawYOffset, w, sliceH);
                  }
               }
-              // 3. 接触不良导致的亮度跌落闪烁 (Exposure Drop)
               if (Math.random() < 0.2) { 
                   ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
                   ctx.fillRect(0, 0, w, h);
@@ -465,7 +452,6 @@
           animationRef.current = requestAnimationFrame(glitchLoop);
       };
 
-      // 监听常规参数变动触发重绘 (此时不在 Lab 模式下会立即应用)
       useEffect(() => { 
         if (!isLabMode) {
            dynamicContrastRef.current = contrast;
@@ -473,18 +459,15 @@
         processImage(); 
       }, [imageObj, pixelSize, paletteIdx, brightness, contrast, ditherStrength, mode]);
 
-      // 监听 Lab 模式开关，负责启停录像前的视觉引擎，并重置参数
       useEffect(() => {
         if (isLabMode && imageObj) {
            if (animationRef.current) cancelAnimationFrame(animationRef.current);
            glitchLoop();
         } else {
            if (animationRef.current) cancelAnimationFrame(animationRef.current);
-           // 确保退出时，将对比度完美复原为用户原本设置的固定值
            dynamicContrastRef.current = contrastRef.current;
            processImage();
            
-           // 恢复 UI 滑块位置与渐变背景
            const slider = document.getElementById('slider-contrast');
            const display = document.getElementById('display-contrast');
            if (slider) {
@@ -503,13 +486,10 @@
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        // 如果处于实验室模式，导出 5秒 MP4 视频 (录制期间闪烁红灯)
         if (isLabMode) {
           if (isRecording) return; 
           setIsRecording(true);
-
           const stream = canvas.captureStream(30);
-          
           let mimeType = '';
           if (MediaRecorder.isTypeSupported('video/mp4')) {
             mimeType = 'video/mp4';
@@ -518,41 +498,25 @@
           } else if (MediaRecorder.isTypeSupported('video/webm')) {
             mimeType = 'video/webm';
           }
-
           const options = mimeType ? { mimeType } : {};
           const recorder = new MediaRecorder(stream, options);
           const chunks = [];
-
-          recorder.ondataavailable = (e) => {
-            if (e.data.size > 0) chunks.push(e.data);
-          };
-
+          recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
           recorder.onstop = () => {
             const actualMime = mimeType || 'video/mp4';
             const extension = actualMime.includes('mp4') ? 'mp4' : 'webm';
             const blob = new Blob(chunks, { type: actualMime });
             const url = URL.createObjectURL(blob);
-            
             const link = document.createElement('a');
             link.download = `gb_gen_lab_mode_${Date.now()}.${extension}`;
             link.href = url;
             link.click();
-            
             URL.revokeObjectURL(url);
             setIsRecording(false);
           };
-
           recorder.start();
-          
-          // 录制 5 秒钟的故障动画
-          setTimeout(() => {
-            if (recorder.state === "recording") {
-              recorder.stop();
-            }
-          }, 5000);
-
+          setTimeout(() => { if (recorder.state === "recording") recorder.stop(); }, 5000);
         } else {
-          // 普通模式，导出 PNG 图片
           const link = document.createElement('a');
           link.download = `gb_gen_${mode}_${Date.now()}.png`;
           link.href = canvas.toDataURL();
@@ -596,7 +560,6 @@
           )}
 
           <div className="w-[75vw] max-w-5xl flex flex-col gap-5 animate-pop-in">
-            {/* 顶栏：完全移除所有边框 */}
             <div className={`${containerClass} p-4 flex items-center justify-between gap-6 flex-shrink-0`}>
               <div className="flex items-center gap-5 text-left">
                 <img src="others/xieyoujune.jpg" alt="Avatar" className="user-avatar" onError={(e) => e.target.style.display='none'} />
@@ -628,19 +591,14 @@
             </div>
 
             <div className="flex gap-5 items-stretch justify-center h-full min-h-[480px] lg:max-h-[540px] xl:max-h-[580px]">
-              
-              {/* 控制台 */}
               {imageObj && (
                 <div className={`w-[320px] xl:w-[350px] flex-shrink-0 ${containerClass} p-4 flex flex-col justify-between overflow-hidden animate-pop-in`}>
-                  
-                  {/* 卡片1：模式选择与新加的 Lab 按钮 */}
                   <div className={`${cardClass} p-4`}>
                     <div className="flex gap-2.5 items-center">
                       <div className="flex-1 flex p-1 bg-black/30 rounded-xl items-stretch">
                           <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}>GB</button>
                           <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}>GBC</button>
                           <div className="w-[1px] bg-white/5 mx-1 my-1"></div>
-                          {/* 新增的 Lab Mode 按钮 */}
                           <button 
                             onClick={() => setIsLabMode(!isLabMode)} 
                             className={`px-3 flex items-center justify-center rounded-lg transition-all ${isLabMode ? 'bg-green-500/20 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}
@@ -655,7 +613,6 @@
                     </div>
                   </div>
 
-                  {/* 卡片2：参数控制（滑块动态自控机制） */}
                   <div className={`${cardClass} p-4`}>
                     <div className="flex flex-col gap-4 text-left">
                       <div className="flex flex-col gap-2">
@@ -700,7 +657,6 @@
                     </div>
                   </div>
 
-                  {/* 卡片3：调色板 */}
                   <div className={`${cardClass} p-4 transition-opacity duration-500 ${mode === 'GBC' ? 'opacity-20 pointer-events-none grayscale' : 'opacity-100'}`}>
                     <div className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-3 text-left">调色板 / Palettes</div>
                     <div className="grid grid-cols-2 gap-2 text-left">
@@ -715,7 +671,6 @@
                     </div>
                   </div>
 
-                  {/* 卡片4：小提示 */}
                   <div className={`${cardClass} p-4`}>
                     <div className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-1 text-left">有君建议 / June's Tips</div>
                     <div className="h-[20px] relative overflow-hidden text-left">
@@ -729,7 +684,6 @@
                 </div>
               )}
 
-              {/* 预览显示区 */}
               <div 
                 className={`flex-1 ${containerClass} bg-[#000000] flex flex-col items-center justify-center relative p-8`} 
                 onDoubleClick={() => !imageObj && fileInputRef.current?.click()}
