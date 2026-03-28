@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>GB Gen 图像实验室</title>
   
-  <!-- 基础 Favicon：严格指向你的 PNG 路径 -->
-  <link rel="icon" href="others/icon.png" type="image/png">
+  <!-- 基础 Favicon -->
+  <link rel="icon" href="others/icon.png?v=1" type="image/png">
   
-  <!-- 苹果设备专用：彻底消除 PWA 桌面图标白边，强制 1:1 物理拉伸 -->
-  <link rel="apple-touch-icon" href="others/icon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="others/icon.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="others/icon.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="others/icon.png">
+  <!-- 苹果设备专用：彻底消除 PWA 桌面图标白边 -->
+  <!-- 使用 precomposed 声明，强制系统 1:1 物理拉伸，禁止系统自动填充白底 -->
+  <link rel="apple-touch-icon-precomposed" href="others/icon.png?v=1">
+  <link rel="apple-touch-icon" sizes="180x180" href="others/icon.png?v=1">
   
+  <!-- 颜色配置同步 -->
   <meta name="theme-color" content="#0c0c0c">
   
-  <!-- 苹果 WebApp 强制全屏及系统栏沉浸式适配 -->
+  <!-- 苹果 WebApp 强制标准适配 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="GB Gen">
@@ -119,7 +119,6 @@
       box-shadow: none;
     }
 
-    /* 急促闪烁的红灯动画，用于录像反馈 */
     @keyframes fastBlink {
       0%, 100% { opacity: 1; box-shadow: 0 0 15px rgba(239, 68, 68, 1); }
       50% { opacity: 0.3; box-shadow: 0 0 2px rgba(239, 68, 68, 0.5); }
@@ -141,17 +140,23 @@
         short_name: "GB Gen",
         start_url: "./", 
         display: "standalone", 
-        background_color: "#000000", // 强制设定启动背景为纯黑，防止图标周围漏出白底
+        background_color: "#0c0c0c", // 强制启动页背景与应用统一，消除缝隙
         theme_color: "#0c0c0c",
         icons: [
           { 
-            src: "others/icon.png", 
-            sizes: "192x192", 
+            src: "others/icon.png?v=1", 
+            sizes: "180x180", 
             type: "image/png",
-            purpose: "any" // 设定为不可遮罩图标，告诉系统不要进行安全区域缩放
+            purpose: "any" // 设定为“不可遮罩”，阻止系统为了适配圆角而内缩图标
           },
           { 
-            src: "others/icon.png", 
+            src: "others/icon.png?v=1", 
+            sizes: "192x192", 
+            type: "image/png",
+            purpose: "any" 
+          },
+          { 
+            src: "others/icon.png?v=1", 
             sizes: "512x512", 
             type: "image/png",
             purpose: "any" 
