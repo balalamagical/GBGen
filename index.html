@@ -8,10 +8,8 @@
   <!-- 基础 Favicon -->
   <link rel="icon" href="others/icon.png?v=20240329" type="image/png">
   
-  <!-- Reddit 社区推荐的 iOS 极致去白边方案 -->
-  <!-- 1. 使用 precomposed 属性强制 iOS 放弃任何自动补边和缩放处理 -->
+  <!-- 苹果设备专用：iOS 极致去白边，强制 1:1 物理拉伸 -->
   <link rel="apple-touch-icon-precomposed" href="others/icon.png?v=20240329">
-  <!-- 2. 不带 sizes 的声明通常在最新版 iOS 中具有最高优先级，防止系统因匹配尺寸而产生内缩 -->
   <link rel="apple-touch-icon" href="others/icon.png?v=20240329">
   
   <!-- 系统颜色强制同步 -->
@@ -141,7 +139,7 @@
         short_name: "GB Gen",
         start_url: "./", 
         display: "standalone", 
-        background_color: "#0c0c0c", // 必须与 Body 颜色绝对一致
+        background_color: "#0c0c0c",
         theme_color: "#0c0c0c",
         icons: [
           { 
@@ -573,7 +571,9 @@
             </div>
           )}
 
+          {/* 桌面居中容器：占画面 70% 左右 */}
           <div className="w-[75vw] max-w-5xl flex flex-col gap-5 animate-pop-in">
+            {/* 顶栏 */}
             <div className={`${containerClass} p-4 flex items-center justify-between gap-6 flex-shrink-0`}>
               <div className="flex items-center gap-5 text-left">
                 <img src="others/xieyoujune.jpg" alt="Avatar" className="user-avatar" onError={(e) => e.target.style.display='none'} />
@@ -605,8 +605,11 @@
             </div>
 
             <div className="flex gap-5 items-stretch justify-center h-full min-h-[480px] lg:max-h-[540px] xl:max-h-[580px]">
+              {/* 控制台：修改 justify-between 为 justify-start，强制让方块向上挪并保持固定间距 */}
               {imageObj && (
-                <div className={`w-[320px] xl:w-[350px] flex-shrink-0 ${containerClass} p-4 flex flex-col justify-between overflow-hidden animate-pop-in`}>
+                <div className={`w-[320px] xl:w-[350px] flex-shrink-0 ${containerClass} p-4 flex flex-col justify-start gap-4 overflow-hidden animate-pop-in`}>
+                  
+                  {/* 卡片1：模式选择 */}
                   <div className={`${cardClass} p-4`}>
                     <div className="flex gap-2.5 items-center">
                       <div className="flex-1 flex p-1 bg-black/30 rounded-xl items-stretch">
@@ -627,6 +630,7 @@
                     </div>
                   </div>
 
+                  {/* 卡片2：参数控制 */}
                   <div className={`${cardClass} p-4`}>
                     <div className="flex flex-col gap-4 text-left">
                       <div className="flex flex-col gap-2">
@@ -671,11 +675,12 @@
                     </div>
                   </div>
 
+                  {/* 卡片3：调色板 */}
                   <div className={`${cardClass} p-4 transition-opacity duration-500 ${mode === 'GBC' ? 'opacity-20 pointer-events-none grayscale' : 'opacity-100'}`}>
                     <div className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-3 text-left">调色板 / Palettes</div>
                     <div className="grid grid-cols-2 gap-2 text-left">
                       {PALETTES.map((p, i) => (
-                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-2 px-3 py-2 rounded-xl transition-all ${paletteIdx === i ? 'bg-zinc-800 text-green-400' : 'bg-black/30 hover:bg-zinc-800 text-zinc-500'}`}>
+                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-2 px-3 py-2 rounded-xl transition-all ${paletteIdx === i ? 'bg-zinc-800 ring-1 ring-green-500 text-green-400' : 'bg-black/30 hover:bg-zinc-800 text-zinc-500'}`}>
                           <span className="text-[9px] font-black uppercase tracking-tighter truncate text-left">{p.name.split(' (')[0]}</span>
                           <div className="flex h-1 w-full rounded-full overflow-hidden shadow-inner">
                             {p.colors.map(c => <div key={c} style={{backgroundColor: c}} className="flex-1" />)}
@@ -685,6 +690,7 @@
                     </div>
                   </div>
 
+                  {/* 卡片4：小提示 - 现在的间距会紧跟在调色板下方 */}
                   <div className={`${cardClass} p-4`}>
                     <div className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-1 text-left">有君建议 / June's Tips</div>
                     <div className="h-[20px] relative overflow-hidden text-left">
@@ -698,6 +704,7 @@
                 </div>
               )}
 
+              {/* 预览显示区 */}
               <div 
                 className={`flex-1 ${containerClass} bg-[#000000] flex flex-col items-center justify-center relative p-8`} 
                 onDoubleClick={() => !imageObj && fileInputRef.current?.click()}
