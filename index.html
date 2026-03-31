@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>GB Gen 图像实验室</title>
+  <title>GB Gen 图像与视频实验室</title>
   
   <meta name="theme-color" content="#0c0c0c">
   
@@ -116,7 +116,6 @@
       animation: fastBlink 0.3s ease-in-out infinite;
     }
 
-    /* 新增：咖啡杯专属脉动渐变 */
     @keyframes coffee-pulse {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
@@ -205,12 +204,12 @@
     ];
 
     const JUNE_TIPS = [
-      "尽可能导入对比度比较高的照片",
+      "尽可能导入对比度比较高的照片或视频",
       "像素颗粒和对比度是比较重要的参数",
-      "个人比较喜欢口袋灰和经典绿",
+      "已经支持导入主流视频格式了！",
+      "导出视频时，再次点击导出按钮即可结束录制",
       "骰子模式你玩了吗？打开之后有点版画的质感",
-      "骰子模式的基础上调像素粒径？可以啊",
-      "你可以导入不同比例的图片，导出不会被裁剪",
+      "你可以导入不同比例的图片和视频，导出不会被裁剪",
       "谢有君还有游戏和音乐项目，欢迎关注了解"
     ];
 
@@ -227,7 +226,10 @@
     };
 
     function App() {
-      const [imageObj, setImageObj] = useState(null);
+      // 核心状态支持通用媒体（图片或视频）
+      const [mediaObj, setMediaObj] = useState(null);
+      const [mediaType, setMediaType] = useState(''); // 'image' 或 'video'
+      
       const [pixelSize, setPixelSize] = useState(6); 
       const [paletteIdx, setPaletteIdx] = useState(0); 
       const [brightness, setBrightness] = useState(-21);
@@ -250,8 +252,10 @@
       
       const processedCanvasRef = useRef(null);
       const animationRef = useRef(null);
+      const recorderRef = useRef(null);
       
-      const imageObjRef = useRef(imageObj);
+      const mediaObjRef = useRef(mediaObj);
+      const mediaTypeRef = useRef(mediaType);
       const pixelSizeRef = useRef(pixelSize);
       const paletteIdxRef = useRef(paletteIdx);
       const brightnessRef = useRef(brightness);
@@ -265,7 +269,8 @@
       
       const isDraggingRef = useRef(false);
 
-      useEffect(() => { imageObjRef.current = imageObj; }, [imageObj]);
+      useEffect(() => { mediaObjRef.current = mediaObj; }, [mediaObj]);
+      useEffect(() => { mediaTypeRef.current = mediaType; }, [mediaType]);
       useEffect(() => { pixelSizeRef.current = pixelSize; }, [pixelSize]);
       useEffect(() => { paletteIdxRef.current = paletteIdx; }, [paletteIdx]);
       useEffect(() => { brightnessRef.current = brightness; }, [brightness]);
@@ -290,16 +295,40 @@
         return () => clearInterval(tipTimer);
       }, []);
 
-      const handleImageUpload = (e) => {
+      const handleMediaUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new Image();
-          img.onload = () => { setImageObj(img); };
-          img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
+
+        // 如果之前有视频，清理资源
+        if (mediaType === 'video' && mediaObj) {
+            mediaObj.pause();
+            mediaObj.removeAttribute('src');
+            mediaObj.load();
+        }
+
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => { 
+                    setMediaObj(img); 
+                    setMediaType('image'); 
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else if (file.type.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(file);
+            video.loop = true;
+            video.muted = true; // 静音以确保在多数浏览器中可以自动播放
+            video.playsInline = true;
+            video.onloadeddata = () => {
+                video.play();
+                setMediaObj(video);
+                setMediaType('video');
+            };
+        }
       };
 
       const handleRandomize = () => {
@@ -325,18 +354,22 @@
         }
       };
 
-      const processImage = () => {
-        const img = imageObjRef.current;
+      const processMedia = () => {
+        const media = mediaObjRef.current;
         const canvas = canvasRef.current;
-        if (!canvas || !img) return false;
+        if (!canvas || !media) return false;
+
+        const isVideo = mediaTypeRef.current === 'video';
+        const width = isVideo ? media.videoWidth : media.width;
+        const height = isVideo ? media.videoHeight : media.height;
+
+        if (width === 0 || height === 0) return false;
 
         if (!processedCanvasRef.current) {
           processedCanvasRef.current = document.createElement('canvas');
         }
         const pCanvas = processedCanvasRef.current;
 
-        const width = img.width;
-        const height = img.height;
         canvas.width = width; canvas.height = height;
         pCanvas.width = width; pCanvas.height = height;
         
@@ -355,7 +388,7 @@
         const offscreen = document.createElement('canvas');
         offscreen.width = logicalWidth; offscreen.height = logicalHeight;
         const offCtx = offscreen.getContext('2d');
-        offCtx.drawImage(img, 0, 0, logicalWidth, logicalHeight);
+        offCtx.drawImage(media, 0, 0, logicalWidth, logicalHeight);
         
         const imgData = offCtx.getImageData(0, 0, logicalWidth, logicalHeight);
         const data = imgData.data;
@@ -417,38 +450,10 @@
         return true;
       };
 
-      const glitchLoop = () => {
-          if (!isLabModeRef.current) return;
+      const applySpatialGlitch = () => {
           const canvas = canvasRef.current;
-          if (!canvas || !imageObjRef.current) return;
-
-          const baseC = contrastRef.current;
-          let needsUpdate = false;
-          
-          if (Math.random() < 0.25) { 
-              dynamicContrastRef.current = baseC + (Math.random() * 20);
-              needsUpdate = true;
-          } else if (Math.random() < 0.1) {
-              dynamicContrastRef.current = baseC;
-              needsUpdate = true;
-          }
-
-          if (needsUpdate) {
-              processImage(); 
-              if (!isDraggingRef.current) {
-                  const slider = document.getElementById('slider-contrast');
-                  const display = document.getElementById('display-contrast');
-                  if (slider) {
-                      slider.value = dynamicContrastRef.current;
-                      const pct = ((dynamicContrastRef.current - (-100)) / 200) * 100;
-                      slider.style.background = `linear-gradient(to right, #4ade80 ${pct}%, #3f3f46 ${pct}%)`;
-                  }
-                  if (display) display.innerText = Math.floor(dynamicContrastRef.current);
-              }
-          }
-
           const pCanvas = processedCanvasRef.current;
-          if (!pCanvas) return;
+          if (!canvas || !pCanvas) return;
 
           const ctx = canvas.getContext('2d');
           const w = canvas.width;
@@ -479,25 +484,74 @@
                   ctx.fillRect(0, 0, w, h);
               }
           }
-          
-          animationRef.current = requestAnimationFrame(glitchLoop);
       };
 
+      // 仅处理静态图像常规参数改变（不涉及 Lab 模式或视频）
       useEffect(() => { 
-        if (!isLabMode) {
+        if (mediaType === 'image' && !isLabMode) {
            dynamicContrastRef.current = contrast;
+           processMedia(); 
         }
-        processImage(); 
-      }, [imageObj, pixelSize, paletteIdx, brightness, contrast, ditherStrength, hue, saturation, mode]);
+      }, [mediaObj, pixelSize, paletteIdx, brightness, contrast, ditherStrength, hue, saturation, mode, isLabMode, mediaType]);
 
+      // 处理帧循环 (视频模式和 Lab 模式)
       useEffect(() => {
-        if (isLabMode && imageObj) {
-           if (animationRef.current) cancelAnimationFrame(animationRef.current);
-           glitchLoop();
+        if (!mediaObj) return;
+
+        const loop = () => {
+            const isVideo = mediaTypeRef.current === 'video';
+            const isLab = isLabModeRef.current;
+
+            if (!isVideo && !isLab) return;
+
+            let frameNeedsProcess = isVideo; // 视频模式每帧必刷
+
+            if (isLab) {
+                const baseC = contrastRef.current;
+                let contrastChanged = false;
+                if (Math.random() < 0.25) { 
+                    dynamicContrastRef.current = baseC + (Math.random() * 20);
+                    contrastChanged = true;
+                } else if (Math.random() < 0.1) {
+                    dynamicContrastRef.current = baseC;
+                    contrastChanged = true;
+                }
+
+                if (contrastChanged) {
+                    frameNeedsProcess = true;
+                    if (!isDraggingRef.current) {
+                        const slider = document.getElementById('slider-contrast');
+                        const display = document.getElementById('display-contrast');
+                        if (slider) {
+                            slider.value = dynamicContrastRef.current;
+                            const pct = ((dynamicContrastRef.current - (-100)) / 200) * 100;
+                            slider.style.background = `linear-gradient(to right, #4ade80 ${pct}%, #3f3f46 ${pct}%)`;
+                        }
+                        if (display) display.innerText = Math.floor(dynamicContrastRef.current);
+                    }
+                }
+            } else {
+                 dynamicContrastRef.current = contrastRef.current;
+            }
+
+            if (frameNeedsProcess) {
+                processMedia(); 
+            }
+
+            if (isLab) {
+                applySpatialGlitch();
+            }
+
+            animationRef.current = requestAnimationFrame(loop);
+        };
+
+        if (mediaType === 'video' || isLabMode) {
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+            loop();
         } else {
            if (animationRef.current) cancelAnimationFrame(animationRef.current);
            dynamicContrastRef.current = contrastRef.current;
-           processImage();
+           processMedia();
            
            const slider = document.getElementById('slider-contrast');
            const display = document.getElementById('display-contrast');
@@ -508,17 +562,23 @@
            }
            if (display) display.innerText = Math.floor(dynamicContrastRef.current);
         }
+
         return () => {
            if (animationRef.current) cancelAnimationFrame(animationRef.current);
         };
-      }, [isLabMode, imageObj]);
+      }, [isLabMode, mediaObj, mediaType]);
 
       const download = () => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        if (isLabMode) {
-          if (isRecording) return; 
+        // 若正在录制，则停止录制
+        if (isRecording && recorderRef.current) {
+            recorderRef.current.stop();
+            return;
+        }
+
+        if (isLabMode || mediaType === 'video') {
           setIsRecording(true);
           const stream = canvas.captureStream(30);
           let mimeType = '';
@@ -531,6 +591,8 @@
           }
           const options = mimeType ? { mimeType } : {};
           const recorder = new MediaRecorder(stream, options);
+          recorderRef.current = recorder;
+          
           const chunks = [];
           recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
           recorder.onstop = () => {
@@ -539,14 +601,21 @@
             const blob = new Blob(chunks, { type: actualMime });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.download = `gb_gen_lab_mode_${Date.now()}.${extension}`;
+            link.download = `gb_gen_${mediaType}_${Date.now()}.${extension}`;
             link.href = url;
             link.click();
             URL.revokeObjectURL(url);
             setIsRecording(false);
+            recorderRef.current = null;
           };
+          
           recorder.start();
-          setTimeout(() => { if (recorder.state === "recording") recorder.stop(); }, 5000);
+          // 最长限制 15 秒以防浏览器卡死，用户可提前点击按钮停止
+          setTimeout(() => { 
+              if (recorderRef.current && recorderRef.current.state === "recording") {
+                  recorderRef.current.stop(); 
+              }
+          }, 15000);
         } else {
           const link = document.createElement('a');
           link.download = `gb_gen_${mode}_${Date.now()}.png`;
@@ -568,7 +637,7 @@
             paddingRight: 'max(1rem, env(safe-area-inset-right))'
           }}
         >
-          <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+          <input type="file" ref={fileInputRef} onChange={handleMediaUpload} accept="image/*,video/*" className="hidden" />
 
           {showDonationModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md" onClick={() => setShowDonationModal(false)}>
@@ -611,14 +680,13 @@
               </div>
               <div className="flex gap-2">
                 <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl flex items-center gap-2 transition-all text-sm font-black uppercase tracking-widest"><IconUpload size={16} />上传</button>
-                <button onClick={download} disabled={!imageObj || isRecording} className="px-5 py-2.5 bg-green-500 hover:bg-green-400 text-zinc-950 rounded-xl flex items-center gap-2 transition-all disabled:opacity-20 text-sm font-black uppercase tracking-widest min-w-[110px] justify-center">
+                <button onClick={download} disabled={!mediaObj} className="px-5 py-2.5 bg-green-500 hover:bg-green-400 text-zinc-950 rounded-xl flex items-center gap-2 transition-all disabled:opacity-20 text-sm font-black uppercase tracking-widest min-w-[120px] justify-center">
                   {isRecording ? (
-                    <span className="flex items-center gap-2 animate-pulse"><div className="w-2 h-2 bg-red-500 rounded-full"></div> 录制中</span>
+                    <span className="flex items-center gap-2 animate-pulse"><div className="w-2 h-2 bg-red-500 rounded-full"></div> 停止录制</span>
                   ) : (
                     <><IconDownload size={16} />导出</>
                   )}
                 </button>
-                {/* 核心改动：咖啡杯专属脉动渐变逻辑 */}
                 <button 
                   onClick={() => setShowDonationModal(true)} 
                   className="px-4 py-2.5 bg-zinc-800 text-zinc-100 rounded-xl flex items-center btn-coffee-lab"
@@ -630,7 +698,7 @@
 
             <div className="flex gap-5 items-stretch justify-center h-full min-h-[480px] lg:max-h-[540px] xl:max-h-[580px]">
               {/* 控制台 */}
-              {imageObj && (
+              {mediaObj && (
                 <div className={`w-[320px] xl:w-[350px] flex-shrink-0 ${containerClass} p-4 flex flex-col justify-start gap-4 overflow-hidden animate-pop-in`}>
                   
                   {/* 卡片1：模式选择 */}
@@ -736,28 +804,28 @@
               {/* 预览显示区 */}
               <div 
                 className={`flex-1 ${containerClass} bg-[#000000] flex flex-col relative overflow-hidden`} 
-                onDoubleClick={() => !imageObj && fileInputRef.current?.click()}
+                onDoubleClick={() => !mediaObj && fileInputRef.current?.click()}
               >
                 {/* 顶部状态条 */}
                 <div className="h-14 flex items-center px-6 shrink-0 z-20">
                     <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${
-                        !imageObj ? 'bg-zinc-900' : 
+                        !mediaObj ? 'bg-zinc-900' : 
                         isRecording ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)] animate-fast-blink' : 
-                        (isLabMode ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-pulse')
+                        (isLabMode || mediaType === 'video' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-pulse')
                       }`}></div>
                       <div className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.2em] leading-none text-left">
-                        {isRecording ? 'RECORDING VIDEO...' : '显示输出 / Live Output'}
+                        {isRecording ? 'RECORDING MEDIA...' : '显示输出 / Live Output'}
                       </div>
                     </div>
                 </div>
 
                 {/* 核心显示区 */}
                 <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center px-8 relative z-10 text-left">
-                  {!imageObj ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center cursor-pointer group text-center">
+                  {!mediaObj ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center cursor-pointer group text-center" onClick={() => fileInputRef.current?.click()}>
                       <div className="relative inline-block transition-transform group-hover:scale-105 duration-500">
-                        <p className="text-[22px] font-bold text-zinc-400 tracking-wide leading-none mb-[14px]">请提供一张图像</p>
+                        <p className="text-[22px] font-bold text-zinc-400 tracking-wide leading-none mb-[14px]">请提供一张图像或一段视频</p>
                         <div className="flex justify-between text-[13px] font-medium text-zinc-600 leading-none text-left">
                           {"点击上方按钮或双击上传".split('').map((char, i) => (
                             <span key={i}>{char}</span>
@@ -777,7 +845,7 @@
 
                 {/* 底部贴士栏 */}
                 <div className="h-14 flex items-center px-8 shrink-0 z-20 pointer-events-none text-left">
-                  {imageObj && (
+                  {mediaObj && (
                     <div className="w-full flex justify-between items-center opacity-40 hover:opacity-100 transition-opacity duration-500">
                       <div className="flex flex-col gap-0.5 text-left">
                         <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest text-left">有君建议 / Hint</div>
