@@ -1,8 +1,8 @@
 请点击这里使用软件 / Please click here ：https://xieyoujune.github.io/GBGen/  
 # GBG # GB Gen # 像素 图像实验室
   
-只需要导入你的图片，简单设置一下参数，就能获得富有艺术感的像素图片。以下是实例：  
-Just import your image and set a few simple parameters to get a pixelated picture. Here are some examples:  
+只需要导入你的图片（或者视频），简单设置一下参数，就能获得富有艺术感的像素照片。以下是实例：  
+Just import your image and set a few simple parameters to get a pixelated art. Here are some examples:  
 
 
 <img width="1512" height="646" alt="截屏2026-03-27 01 52 46" src="https://github.com/user-attachments/assets/9ea0ddf0-056b-46bb-86fc-e45f7798a37a" />
