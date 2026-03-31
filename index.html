@@ -154,7 +154,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useRef, useCallback } = React;
 
     const registerServiceWorker = () => {
       if ('serviceWorker' in navigator) {
@@ -169,7 +169,7 @@
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
       ),
       Download: ({ size = 20 }) => (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       ),
       Coffee: ({ size = 18 }) => (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="13" y1="1" x2="13" y2="4"/></svg>
@@ -190,11 +190,13 @@
 
     const PALETTES = [
       { id: 'pocket', name: '口袋灰 (Pocket Gray)', colors: ['#2b2b26', '#706b66', '#a89f94', '#e0d7c8'] },
+      { id: 'life', name: '人生黑 (Life Black)', colors: ['#000000', '#525252', '#a3a3a3', '#ffffff'] },
       { id: 'classic', name: '经典绿 (Classic DMG)', colors: ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'] },
       { id: 'blue', name: '冷光蓝 (Light Blue)', colors: ['#002b59', '#005f8c', '#0098ba', '#cae6ea'] },
       { id: 'vb', name: '虚拟男孩 (Virtual Boy)', colors: ['#000000', '#550000', '#aa0000', '#ff0000'] },
       { id: 'gold', name: '复古金 (Warm Gold)', colors: ['#2c1b01', '#7a4d13', '#c1913c', '#f3d87a'] },
-      { id: 'cyber', name: '赛博朋克 (Cyberpunk)', colors: ['#12012e', '#005f8c', '#d9116e', '#00ffcc'] }
+      { id: 'cyber', name: '赛博朋克 (Cyberpunk)', colors: ['#12012e', '#005f8c', '#d9116e', '#00ffcc'] },
+      { id: 'amber', name: '琥珀色 (Amber IBM)', colors: ['#2b1800', '#7a4300', '#c26b00', '#ffbd00'] }
     ];
 
     const hexToRgb = (hex) => {
@@ -208,6 +210,42 @@
       [ 3, 35, 11, 43,  1, 33,  9, 41], [51, 19, 59, 27, 49, 17, 57, 25],
       [15, 47,  7, 39, 13, 45,  5, 37], [63, 31, 55, 23, 61, 29, 53, 21]
     ];
+
+    // 独立优化的 Slider，通过 id 允许底层引擎绕过 React 直控 DOM
+    const Slider = ({ id, label, value, min, max, onChange, onInteractStart, onInteractEnd, suffix = '' }) => {
+      const [localValue, setLocalValue] = useState(value);
+      
+      useEffect(() => { setLocalValue(value); }, [value]);
+
+      const handleInternalChange = (e) => {
+          const v = Number(e.target.value);
+          setLocalValue(v); 
+          onChange(v);      
+      };
+
+      return (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex justify-between text-[11px] font-black text-zinc-500 uppercase tracking-widest text-left">
+            <span>{label}</span>
+            <span id={id ? `display-${id}` : undefined} className="text-zinc-100 font-mono">
+              {suffix === 'PX' ? localValue.toFixed(1) : localValue.toFixed(2)}{suffix}
+            </span>
+          </div>
+          <input 
+            id={id}
+            type="range" min={min} max={max} step="any"
+            value={localValue} 
+            onChange={handleInternalChange} 
+            onMouseDown={onInteractStart}
+            onMouseUp={onInteractEnd}
+            onTouchStart={onInteractStart}
+            onTouchEnd={onInteractEnd}
+            className="custom-slider w-full" 
+            style={{ background: `linear-gradient(to right, #4ade80 ${((localValue-min)/(max-min || 1))*100}%, #333 ${((localValue-min)/(max-min || 1))*100}%)` }} 
+          />
+        </div>
+      );
+    };
 
     function App() {
       const [mediaObj, setMediaObj] = useState(null);
@@ -226,17 +264,14 @@
       const [isLabMode, setIsLabMode] = useState(false);
       const [isRecording, setIsRecording] = useState(false);
 
-      // V8.0 规范要求 Hooks
-      const [showUIMenu, setShowUIMenu] = useState(false);
-      const avatarClickCount = useRef(0);
-      const avatarClickTimer = useRef(null);
-      const uiRuleInputRef = useRef(null);
-
       const canvasRef = useRef(null);
       const fileInputRef = useRef(null);
-      const processedCanvasRef = useRef(null);
+      
+      const pCanvasRef = useRef(null);
+      const offscreenRef = useRef(null);
       const animationRef = useRef(null);
       const recorderRef = useRef(null);
+      const renderLocked = useRef(false);
       
       const mediaObjRef = useRef(mediaObj);
       const mediaTypeRef = useRef(mediaType);
@@ -250,55 +285,40 @@
       const saturationRef = useRef(saturation);
       const modeRef = useRef(mode);
       const isLabModeRef = useRef(isLabMode);
+      
+      // 交互锁：决定当前是由用户拖动还是机器接管
       const isDraggingRef = useRef(false);
 
-      useEffect(() => { mediaObjRef.current = mediaObj; }, [mediaObj]);
-      useEffect(() => { mediaTypeRef.current = mediaType; }, [mediaType]);
-      useEffect(() => { pixelSizeRef.current = pixelSize; }, [pixelSize]);
-      useEffect(() => { paletteIdxRef.current = paletteIdx; }, [paletteIdx]);
-      useEffect(() => { brightnessRef.current = brightness; }, [brightness]);
-      useEffect(() => { ditherStrengthRef.current = ditherStrength; }, [ditherStrength]);
-      useEffect(() => { hueRef.current = hue; }, [hue]);
-      useEffect(() => { saturationRef.current = saturation; }, [saturation]);
-      useEffect(() => { modeRef.current = mode; }, [mode]);
-      useEffect(() => { isLabModeRef.current = isLabMode; }, [isLabMode]);
+      useEffect(() => { 
+        mediaObjRef.current = mediaObj; 
+        mediaTypeRef.current = mediaType;
+        pixelSizeRef.current = pixelSize;
+        paletteIdxRef.current = paletteIdx;
+        brightnessRef.current = brightness;
+        ditherStrengthRef.current = ditherStrength;
+        hueRef.current = hue;
+        saturationRef.current = saturation;
+        modeRef.current = mode;
+        isLabModeRef.current = isLabMode;
+      }, [mediaObj, mediaType, pixelSize, paletteIdx, brightness, ditherStrength, hue, saturation, mode, isLabMode]);
       
+      // 当关闭 Lab 模式时，将 DOM 控件安全地重置回 React 的当前状态
       useEffect(() => { 
           contrastRef.current = contrast; 
-          if (!isLabModeRef.current) dynamicContrastRef.current = contrast;
-      }, [contrast]);
+          if (!isLabMode) {
+              dynamicContrastRef.current = contrast;
+              const slider = document.getElementById('slider-contrast');
+              const display = document.getElementById('display-slider-contrast');
+              if (slider) {
+                  slider.value = contrast;
+                  const pct = Math.max(0, Math.min(100, ((contrast - (-100)) / 200) * 100));
+                  slider.style.background = `linear-gradient(to right, #4ade80 ${pct}%, #333 ${pct}%)`;
+              }
+              if (display) display.innerText = contrast.toFixed(2);
+          }
+      }, [contrast, isLabMode]);
 
       useEffect(() => { registerServiceWorker(); }, []);
-
-      const handleAvatarClick = () => {
-        avatarClickCount.current += 1;
-        if (avatarClickCount.current === 3) {
-          setShowUIMenu(prev => !prev);
-          avatarClickCount.current = 0;
-          clearTimeout(avatarClickTimer.current);
-        } else {
-          clearTimeout(avatarClickTimer.current);
-          avatarClickTimer.current = setTimeout(() => { avatarClickCount.current = 0; }, 600);
-        }
-      };
-
-      const handleUploadUIRules = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          try { JSON.parse(evt.target.result); setShowUIMenu(false); } catch (err) { console.error("Invalid JSON"); }
-        };
-        reader.readAsText(file);
-      };
-
-      const handleDownloadUIRules = () => {
-        const blob = new Blob([JSON.stringify({name: "GBG-UI-Rules", version: "8.0"}, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'ui-rules.json'; a.click();
-        setShowUIMenu(false);
-      };
 
       const handleMediaUpload = (e) => {
         const file = e.target.files[0];
@@ -342,19 +362,26 @@
         }
       };
 
-      const processMedia = () => {
+      const processMedia = useCallback(() => {
         const media = mediaObjRef.current;
         const canvas = canvasRef.current;
         if (!canvas || !media) return false;
+
         const isVideo = mediaTypeRef.current === 'video';
         const width = isVideo ? media.videoWidth : media.width;
         const height = isVideo ? media.videoHeight : media.height;
         if (width === 0 || height === 0) return false;
-        if (!processedCanvasRef.current) processedCanvasRef.current = document.createElement('canvas');
-        const pCanvas = processedCanvasRef.current;
+
+        if (!pCanvasRef.current) pCanvasRef.current = document.createElement('canvas');
+        if (!offscreenRef.current) offscreenRef.current = document.createElement('canvas');
         
-        canvas.width = width; canvas.height = height;
-        pCanvas.width = width; pCanvas.height = height;
+        const pCanvas = pCanvasRef.current;
+        const offscreen = offscreenRef.current;
+
+        if (canvas.width !== width) canvas.width = width;
+        if (canvas.height !== height) canvas.height = height;
+        if (pCanvas.width !== width) pCanvas.width = width;
+        if (pCanvas.height !== height) pCanvas.height = height;
         
         const pSize = pixelSizeRef.current;
         const activeContrast = dynamicContrastRef.current; 
@@ -368,9 +395,10 @@
         const logicalWidth = Math.max(1, Math.floor(width / pSize));
         const logicalHeight = Math.max(1, Math.floor(height / pSize));
         
-        const offscreen = document.createElement('canvas');
-        offscreen.width = logicalWidth; offscreen.height = logicalHeight;
-        const offCtx = offscreen.getContext('2d');
+        if (offscreen.width !== logicalWidth) offscreen.width = logicalWidth;
+        if (offscreen.height !== logicalHeight) offscreen.height = logicalHeight;
+
+        const offCtx = offscreen.getContext('2d', { alpha: false });
         offCtx.drawImage(media, 0, 0, logicalWidth, logicalHeight);
         
         const imgData = offCtx.getImageData(0, 0, logicalWidth, logicalHeight);
@@ -416,15 +444,15 @@
         pCtx.drawImage(offscreen, 0, 0, logicalWidth, logicalHeight, 0, 0, width, height);
         
         if (!isLabModeRef.current) {
-            const ctx = canvas.getContext('2d'); 
+            const ctx = canvas.getContext('2d', { alpha: false }); 
             ctx.clearRect(0, 0, width, height); 
             ctx.drawImage(pCanvas, 0, 0);
         }
         return true;
-      };
+      }, []);
 
       const applySpatialGlitch = () => {
-          const canvas = canvasRef.current; const pCanvas = processedCanvasRef.current;
+          const canvas = canvasRef.current; const pCanvas = pCanvasRef.current;
           if (!canvas || !pCanvas) return;
           const ctx = canvas.getContext('2d'); const w = canvas.width; const h = canvas.height;
           const currentPixelSize = pixelSizeRef.current;
@@ -447,21 +475,71 @@
           }
       };
 
-      useEffect(() => { if (mediaType === 'image' && !isLabMode) processMedia(); }, [mediaObj, pixelSize, paletteIdx, brightness, contrast, ditherStrength, hue, saturation, mode, isLabMode, mediaType]);
+      // 常规静态模式下的节流渲染，保证滑动丝滑
+      const scheduleRender = useCallback(() => {
+          if (renderLocked.current) return;
+          renderLocked.current = true;
+          requestAnimationFrame(() => {
+              processMedia();
+              renderLocked.current = false;
+          });
+      }, [processMedia]);
 
+      useEffect(() => { 
+        if (mediaType === 'image' && !isLabMode) scheduleRender(); 
+      }, [mediaObj, pixelSize, paletteIdx, brightness, contrast, ditherStrength, hue, saturation, mode, isLabMode, mediaType, scheduleRender]);
+
+      // 核心引擎：处理视频播放与烧杯模式故障逻辑
       useEffect(() => {
         if (!mediaObj) return;
         const loop = () => {
             const isVideo = mediaTypeRef.current === 'video';
             const isLab = isLabModeRef.current;
             if (!isVideo && !isLab) return;
-            if (isVideo || isLab) processMedia(); 
+
+            let frameNeedsProcess = isVideo; 
+
+            // 烧杯模式：对比度自律跳动引擎
+            if (isLab) {
+                const baseC = contrastRef.current;
+                let contrastChanged = false;
+                
+                if (Math.random() < 0.25) { 
+                    dynamicContrastRef.current = baseC + (Math.random() * 60 - 30); // 以拖动值为基准上下波动
+                    contrastChanged = true;
+                } else if (Math.random() < 0.1) {
+                    dynamicContrastRef.current = baseC;
+                    contrastChanged = true;
+                }
+
+                if (contrastChanged) {
+                    frameNeedsProcess = true;
+                    // 如果用户没有在拖动，则将底层数据直接推流到 DOM 滑块，制造自适应故障反馈
+                    if (!isDraggingRef.current) {
+                        const slider = document.getElementById('slider-contrast');
+                        const display = document.getElementById('display-slider-contrast');
+                        if (slider) {
+                            slider.value = dynamicContrastRef.current;
+                            const pct = Math.max(0, Math.min(100, ((dynamicContrastRef.current - (-100)) / 200) * 100));
+                            slider.style.background = `linear-gradient(to right, #4ade80 ${pct}%, #333 ${pct}%)`;
+                        }
+                        if (display) display.innerText = dynamicContrastRef.current.toFixed(2);
+                    }
+                }
+            } else {
+                 dynamicContrastRef.current = contrastRef.current;
+            }
+
+            if (frameNeedsProcess || (isLab && !isVideo)) {
+                processMedia(); 
+            }
+
             if (isLab) applySpatialGlitch();
             animationRef.current = requestAnimationFrame(loop);
         };
         loop();
         return () => cancelAnimationFrame(animationRef.current);
-      }, [isLabMode, mediaObj, mediaType]);
+      }, [isLabMode, mediaObj, mediaType, processMedia]);
 
       const download = () => {
         const canvas = canvasRef.current; if (!canvas) return;
@@ -488,8 +566,9 @@
             link.href = url; link.click(); setIsRecording(false);
           };
           recorder.start();
-          // 默认录制时长固定为 10 秒
-          setTimeout(() => { if (recorder.current && recorder.current.state === "recording") recorder.current.stop(); }, 10000);
+          let targetDuration = 10000; 
+          if (mediaType === 'video' && mediaObj.duration) targetDuration = mediaObj.duration * 1000; 
+          setTimeout(() => { if (recorderRef.current && recorderRef.current.state === "recording") recorderRef.current.stop(); }, targetDuration);
         } else {
           const link = document.createElement('a'); 
           link.download = `gbg_${Date.now()}.png`;
@@ -501,24 +580,8 @@
       const cardClass = "bg-zinc-900/40 rounded-[24px] p-5 flex flex-col gap-4";
       const containerClass = "bg-zinc-800/40 rounded-[28px] overflow-hidden";
 
-      const Slider = ({ label, value, min, max, onChange, suffix = '' }) => (
-        <div className="flex flex-col gap-1.5">
-          <div className="flex justify-between text-[11px] font-black text-zinc-500 uppercase tracking-widest text-left">
-            <span>{label}</span>
-            <span className="text-zinc-100 font-mono">{value}{suffix}</span>
-          </div>
-          <input 
-            type="range" min={min} max={max} step={suffix==='PX'?1:0.1}
-            value={value} onChange={e=>onChange(Number(e.target.value))} 
-            className="custom-slider w-full" 
-            style={{ background: `linear-gradient(to right, #4ade80 ${((value-min)/(max-min || 1))*100}%, #333 ${((value-min)/(max-min || 1))*100}%)` }} 
-          />
-        </div>
-      );
-
       return (
         <div className="h-[100dvh] flex flex-col items-center justify-center p-4 text-zinc-200">
-          <input type="file" ref={uiRuleInputRef} onChange={handleUploadUIRules} accept=".json" className="hidden" />
           <input type="file" ref={fileInputRef} onChange={handleMediaUpload} accept="image/*,video/*" className="hidden" />
 
           {showDonationModal && (
@@ -540,20 +603,9 @@
           )}
 
           <div className="w-full max-w-[1400px] mx-auto flex flex-col gap-4 animate-pop-in h-full">
-            {/* 顶栏 Header */}
             <header className={`${containerClass} rounded-full py-3 px-6 flex items-center justify-between gap-6 shrink-0`}>
               <div className="relative flex items-center gap-5 text-left">
-                <img onClick={handleAvatarClick} src="others/xieyoujune.jpg" className="user-avatar cursor-pointer hover:scale-105 transition-transform" />
-                {showUIMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowUIMenu(false)}></div>
-                    <div className="absolute top-[52px] left-0 z-50 bg-zinc-800 rounded-[20px] p-4 w-[240px] flex flex-col gap-2">
-                      <h3 className="text-[11px] font-black text-white mb-2 uppercase tracking-widest leading-tight">UI Rules Sync</h3>
-                      <button onClick={() => uiRuleInputRef.current?.click()} className="bg-zinc-700/50 hover:bg-zinc-700 text-zinc-200 py-2.5 px-4 rounded-[12px] font-black text-[11px] uppercase tracking-widest text-left">上传规则</button>
-                      <button onClick={handleDownloadUIRules} className="bg-zinc-700/50 hover:bg-zinc-700 text-zinc-200 py-2.5 px-4 rounded-[12px] font-black text-[11px] uppercase tracking-widest text-left">导出规则</button>
-                    </div>
-                  </>
-                )}
+                <img src="others/xieyoujune.jpg" className="user-avatar transition-transform" />
                 <div className="flex flex-col text-left">
                   <span className="text-xl font-black text-zinc-100 leading-none tracking-tight">@谢有君</span>
                   <div className="flex items-center gap-2 mt-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 leading-none">
@@ -578,7 +630,6 @@
             </header>
 
             <div className="flex gap-4 items-stretch justify-center flex-1 min-h-0">
-              {/* 左侧控制栏 */}
               <aside className={`w-[320px] shrink-0 ${containerClass} p-4 flex flex-col gap-4 overflow-hidden animate-pop-in`}>
                 <div className={`${cardClass} bg-zinc-800/20 p-4`}>
                   <div className="flex gap-1.5 p-1 bg-black/30 rounded-[18px]">
@@ -590,19 +641,26 @@
                 </div>
 
                 <div className={`${cardClass} flex-1 p-5`}>
-                  <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-4">
                     <Slider label="像素粒径 / Pixel Size" value={pixelSize} min={1} max={40} onChange={setPixelSize} suffix="PX" />
                     <Slider label="亮度 / Brightness" value={brightness} min={-100} max={100} onChange={setBrightness} />
-                    <Slider label="对比度 / Contrast" value={contrast} min={-100} max={100} onChange={setContrast} />
+                    <Slider 
+                      id="slider-contrast" 
+                      label="对比度 / Contrast" 
+                      value={contrast} min={-100} max={100} 
+                      onChange={setContrast} 
+                      onInteractStart={() => { isDraggingRef.current = true; }}
+                      onInteractEnd={() => { isDraggingRef.current = false; }}
+                    />
                     <Slider label="抖动 / Dither" value={ditherStrength} min={0} max={2} onChange={setDitherStrength} />
                     
-                    <div className={`flex flex-col gap-5 transition-opacity ${mode === 'GB' ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
+                    <div className={`flex flex-col gap-4 transition-opacity ${mode === 'GB' ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
                       <Slider label="色相 / Hue" value={hue} min={0} max={360} onChange={setHue} suffix="°" />
                       <Slider label="饱和度 / Saturation" value={saturation} min={0} max={2} onChange={setSaturation} />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 mt-6 transition-opacity duration-500" style={{opacity: mode==='GBC' ? 0.2 : 1}}>
+                  <div className="grid grid-cols-2 gap-2 mt-4 transition-opacity duration-500" style={{opacity: mode==='GBC' ? 0.2 : 1}}>
                     {PALETTES.map((p, i) => (
                       <button key={i} onClick={()=>setPaletteIdx(i)} className={`flex flex-col gap-2 p-3 rounded-[12px] bg-black/30 transition-all ${paletteIdx===i?'bg-zinc-800 text-green-400':'text-zinc-600 hover:bg-zinc-800/40'}`}>
                         <span className="text-[9px] font-black uppercase truncate text-left tracking-widest">{p.name.split(' (')[0]}</span>
@@ -615,7 +673,6 @@
                 </div>
               </aside>
 
-              {/* 中间预览区 */}
               <main className={`flex-1 ${containerClass} bg-transparent flex flex-col relative`}>
                 <div className="h-12 flex items-center px-6 shrink-0 z-20">
                     <div className="flex items-center gap-3">
@@ -626,7 +683,7 @@
                 <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-hidden" onDoubleClick={()=>!mediaObj&&fileInputRef.current?.click()}>
                   {!mediaObj ? (
                     <div className="text-zinc-400 font-black uppercase tracking-widest text-center cursor-pointer group hover:text-zinc-200 transition-colors" onClick={()=>fileInputRef.current?.click()}>
-                      <p className="text-3xl tracking-tighter opacity-20 group-hover:opacity-40 transition-opacity">Empty</p>
+                      <p className="text-3xl tracking-tighter opacity-20 group-hover:opacity-40 transition-opacity uppercase">Empty</p>
                       <span className="text-[10px] text-zinc-600 mt-4 block uppercase font-bold tracking-[0.2em] leading-none">点击或双击上传媒体文件</span>
                     </div>
                   ) : (
@@ -635,7 +692,6 @@
                     </div>
                   )}
                 </div>
-                {/* 底部状态条：移除黑色背景 */}
                 <footer className="h-14 flex items-center justify-between px-8 bg-transparent opacity-90 shrink-0">
                     <div className="flex flex-col text-left">
                         <span className="text-[9px] font-black uppercase text-zinc-600 tracking-widest">系统状态 / Status</span>
