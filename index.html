@@ -34,7 +34,7 @@
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #444; }
-    
+
     canvas {
       image-rendering: pixelated;
       image-rendering: crisp-edges;
@@ -43,10 +43,10 @@
     }
 
     .user-avatar {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       object-fit: cover;
-      border-radius: 9999px;
+      border-radius: 50%;
       flex-shrink: 0;
     }
 
@@ -82,14 +82,14 @@
     .custom-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 10px; 
-      height: 10px;
+      width: 14px; 
+      height: 14px;
       border-radius: 50%;
       background: #4ade80;
       cursor: pointer;
       border: none;
       box-shadow: none;
-      margin-top: -3px; 
+      margin-top: -5px; 
     }
 
     .custom-slider::-moz-range-track {
@@ -102,8 +102,8 @@
     }
 
     .custom-slider::-moz-range-thumb {
-      width: 10px; 
-      height: 10px;
+      width: 14px; 
+      height: 14px;
       border-radius: 50%;
       background: #4ade80;
       cursor: pointer;
@@ -249,6 +249,8 @@
       const [isLabMode, setIsLabMode] = useState(false);
       const [currentTipIdx, setCurrentTipIdx] = useState(0);
       const [isRecording, setIsRecording] = useState(false);
+      const [showDevMenu, setShowDevMenu] = useState(false);
+      const [videoExtractLen, setVideoExtractLen] = useState('5S');
 
       const canvasRef = useRef(null);
       const fileInputRef = useRef(null);
@@ -256,6 +258,8 @@
       const processedCanvasRef = useRef(null);
       const animationRef = useRef(null);
       const recorderRef = useRef(null);
+      const clickCountRef = useRef(0);
+      const clickTimeoutRef = useRef(null);
       
       const mediaObjRef = useRef(mediaObj);
       const mediaTypeRef = useRef(mediaType);
@@ -297,6 +301,20 @@
         }, 20000);
         return () => clearInterval(tipTimer);
       }, []);
+
+      const handleAvatarClick = () => {
+        clickCountRef.current += 1;
+        if (clickCountRef.current >= 3) {
+          setShowDevMenu(true);
+          clickCountRef.current = 0;
+          clearTimeout(clickTimeoutRef.current);
+        } else {
+          clearTimeout(clickTimeoutRef.current);
+          clickTimeoutRef.current = setTimeout(() => {
+            clickCountRef.current = 0;
+          }, 600);
+        }
+      };
 
       const handleMediaUpload = (e) => {
         const file = e.target.files[0];
@@ -613,12 +631,18 @@
           };
           
           recorder.start();
-          // 最长限制 15 秒以防浏览器卡死，用户可提前点击按钮停止
+          
+          let duration = 15000;
+          if (mediaType === 'video') {
+              duration = parseInt(videoExtractLen) * 1000;
+          }
+          
+          // 根据设定的提取时长自动停止录制
           setTimeout(() => { 
               if (recorderRef.current && recorderRef.current.state === "recording") {
                   recorderRef.current.stop(); 
               }
-          }, 15000);
+          }, duration);
         } else {
           const link = document.createElement('a');
           link.download = `gb_gen_${mode}_${Date.now()}.png`;
@@ -627,7 +651,7 @@
         }
       };
 
-      const cardClass = "bg-zinc-900/40 rounded-2xl p-5 flex flex-col";
+      const cardClass = "bg-zinc-900/40 rounded-[24px] p-5 flex flex-col";
       const containerClass = "w-full bg-zinc-800/40 rounded-[28px] overflow-hidden";
 
       return (
@@ -642,19 +666,29 @@
         >
           <input type="file" ref={fileInputRef} onChange={handleMediaUpload} accept="image/*,video/*" className="hidden" />
 
+          {showDevMenu && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm" onClick={() => setShowDevMenu(false)}>
+              <div className="bg-[#e5e7eb] rounded-[24px] p-8 max-w-sm w-full relative flex flex-col gap-3 animate-pop-in" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-xl font-black text-gray-900 mb-4 tracking-tight">开发者菜单<br/><span className="text-[10px] text-gray-500 tracking-widest uppercase">UI Rules Sync</span></h2>
+                <button className="bg-white text-gray-800 py-3 px-5 rounded-[16px] font-black text-sm uppercase tracking-widest hover:bg-gray-50 transition-all">上传 UI 规则</button>
+                <button className="bg-white text-gray-800 py-3 px-5 rounded-[16px] font-black text-sm uppercase tracking-widest hover:bg-gray-50 transition-all">下载 UI 规则</button>
+              </div>
+            </div>
+          )}
+
           {showDonationModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md" onClick={() => setShowDonationModal(false)}>
-              <div className="bg-zinc-900 rounded-[32px] p-10 max-w-2xl w-full relative flex flex-col items-center animate-pop-in" onClick={(e) => e.stopPropagation()}>
+              <div className="bg-zinc-900 rounded-[28px] p-10 max-w-2xl w-full relative flex flex-col items-center animate-pop-in" onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => setShowDonationModal(false)} className="absolute top-6 right-6 text-zinc-500 hover:text-zinc-200 p-2 hover:bg-zinc-800 rounded-full transition-all"><IconClose size={24} /></button>
                 <h2 className="text-2xl font-bold text-zinc-100 mb-2 mt-4">请我喝杯咖啡 ☕️</h2>
                 <p className="text-sm text-zinc-500 mb-10">如果这个工具对你有帮助，欢迎打赏支持独立开发</p>
                 <div className="flex gap-8 w-full justify-center">
-                  <div className="flex flex-col items-center bg-zinc-950 p-5 rounded-3xl w-[240px]">
-                    <div className="w-full aspect-square bg-white rounded-2xl overflow-hidden mb-4"><img src="others/wechatpay.jpg" alt="微信支付" className="w-full h-full object-cover" /></div>
+                  <div className="flex flex-col items-center bg-zinc-950 p-5 rounded-[24px] w-[240px]">
+                    <div className="w-full aspect-square bg-white rounded-[20px] overflow-hidden mb-4"><img src="others/wechatpay.jpg" alt="微信支付" className="w-full h-full object-cover" /></div>
                     <span className="text-sm font-bold text-[#07c160] tracking-widest">微信支付</span>
                   </div>
-                  <div className="flex flex-col items-center bg-zinc-950 p-5 rounded-3xl w-[240px]">
-                    <div className="w-full aspect-square bg-white rounded-2xl overflow-hidden mb-4"><img src="others/alipay.jpg" alt="支付宝" className="w-full h-full object-cover" /></div>
+                  <div className="flex flex-col items-center bg-zinc-950 p-5 rounded-[24px] w-[240px]">
+                    <div className="w-full aspect-square bg-white rounded-[20px] overflow-hidden mb-4"><img src="others/alipay.jpg" alt="支付宝" className="w-full h-full object-cover" /></div>
                     <span className="text-sm font-bold text-[#1677ff] tracking-widest">支付宝</span>
                   </div>
                 </div>
@@ -662,11 +696,11 @@
             </div>
           )}
 
-          <div className="w-[75vw] max-w-5xl flex flex-col gap-5 animate-pop-in">
+          <div className="w-full max-w-[1400px] mx-auto flex flex-col gap-4 animate-pop-in h-full min-h-0">
             {/* 顶栏 */}
-            <div className={`${containerClass} p-4 flex items-center justify-between gap-6 flex-shrink-0`}>
+            <div className={`${containerClass} py-3 px-6 flex items-center justify-between gap-6 flex-shrink-0`}>
               <div className="flex items-center gap-5 text-left">
-                <img src="others/xieyoujune.jpg" alt="Avatar" className="user-avatar" onError={(e) => e.target.style.display='none'} />
+                <img id="header_avatar_image" onClick={handleAvatarClick} src="others/xieyoujune.jpg" alt="Avatar" className="user-avatar cursor-pointer" onError={(e) => e.target.style.display='none'} />
                 <div className="flex flex-col text-left">
                   <span className="text-xl font-black text-zinc-100 leading-none tracking-tight transition-all duration-200">{userDisplayName}</span>
                   <div className="flex items-center gap-2 mt-1.5 text-[10px] font-bold uppercase tracking-widest">
@@ -682,8 +716,8 @@
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl flex items-center gap-2 transition-all text-sm font-black uppercase tracking-widest"><IconUpload size={16} />上传</button>
-                <button onClick={download} disabled={!mediaObj} className="px-5 py-2.5 bg-green-500 hover:bg-green-400 text-zinc-950 rounded-xl flex items-center gap-2 transition-all disabled:opacity-20 text-sm font-black uppercase tracking-widest min-w-[120px] justify-center">
+                <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-[12px] flex items-center gap-2 transition-all text-sm font-black uppercase tracking-widest"><IconUpload size={16} />上传</button>
+                <button onClick={download} disabled={!mediaObj} className="px-5 py-2 bg-green-500 hover:bg-green-400 text-zinc-950 rounded-[12px] flex items-center gap-2 transition-all disabled:opacity-20 text-sm font-black uppercase tracking-widest min-w-[120px] justify-center">
                   {isRecording ? (
                     <span className="flex items-center gap-2 animate-pulse"><div className="w-2 h-2 bg-red-500 rounded-full"></div> 停止录制</span>
                   ) : (
@@ -692,48 +726,64 @@
                 </button>
                 <button 
                   onClick={() => setShowDonationModal(true)} 
-                  className="px-4 py-2.5 bg-zinc-800 text-zinc-100 rounded-xl flex items-center btn-coffee-lab"
+                  className="px-4 py-2 bg-zinc-800 text-zinc-100 rounded-[12px] flex items-center btn-coffee-lab"
                 >
                   <IconCoffee size={18} />
                 </button>
               </div>
             </div>
 
-            <div className="flex gap-5 items-stretch justify-center h-full min-h-[480px] lg:max-h-[540px] xl:max-h-[580px]">
+            <div className="flex gap-4 items-stretch justify-center h-full min-h-0">
               {/* 控制台 */}
               {mediaObj && (
-                <div className={`w-[320px] xl:w-[350px] flex-shrink-0 ${containerClass} p-4 flex flex-col justify-start gap-4 overflow-hidden animate-pop-in`}>
+                <div className={`w-[320px] flex-shrink-0 ${containerClass} p-4 flex flex-col justify-start gap-4 overflow-hidden animate-pop-in`}>
                   
                   {/* 卡片1：模式选择 */}
-                  <div className={`${cardClass} p-4`}>
+                  <div className={`${cardClass}`}>
                     <div className="flex gap-2.5 items-center">
-                      <div className="flex-1 flex p-1 bg-black/30 rounded-xl items-stretch">
-                          <button onClick={() => setMode('GB')} className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}>GB</button>
-                          <button onClick={() => setMode('GBC')} className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}>GBC</button>
+                      <div className="flex-1 flex p-1 bg-black/30 rounded-[18px] items-stretch">
+                          <button onClick={() => setMode('GB')} className={`flex-1 py-1 text-[11px] font-black uppercase tracking-widest rounded-[12px] transition-all ${mode === 'GB' ? 'bg-zinc-700 text-green-400' : 'text-zinc-600 hover:text-zinc-300'}`}>GB</button>
+                          <button onClick={() => setMode('GBC')} className={`flex-1 py-1 text-[11px] font-black uppercase tracking-widest rounded-[12px] transition-all ${mode === 'GBC' ? 'bg-zinc-700 text-green-400' : 'text-zinc-600 hover:text-zinc-300'}`}>GBC</button>
                           <div className="w-[1px] bg-white/5 mx-1 my-1"></div>
                           <button 
                             onClick={() => setIsLabMode(!isLabMode)} 
-                            className={`px-3 flex items-center justify-center rounded-lg transition-all ${isLabMode ? 'bg-green-500/20 text-green-400 shadow-xl' : 'text-zinc-600 hover:text-zinc-300'}`}
+                            className={`p-2 flex items-center justify-center rounded-[12px] transition-all ${isLabMode ? 'bg-green-500/20 text-green-400' : 'text-zinc-600 hover:text-zinc-300'}`}
                             title="Lab Mode (Glitch Effect)"
                           >
                             <IconFlask size={16} />
                           </button>
                       </div>
-                      <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2.5 bg-black/30 hover:bg-zinc-800 rounded-xl transition-all text-zinc-500 hover:text-green-400 text-center flex items-center justify-center">
+                      <button onClick={isRandomized ? handleUndo : handleRandomize} className="p-2 bg-black/30 hover:bg-zinc-800 rounded-[10px] transition-all text-zinc-500 hover:text-green-400 text-center flex items-center justify-center">
                         {isRandomized ? <IconUndo size={18} /> : <IconDice size={18} />}
                       </button>
                     </div>
                   </div>
 
+                  {/* 视频专属控制：时长提取 */}
+                  {mediaType === 'video' && (
+                    <div className={`${cardClass}`}>
+                      <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest text-left mb-2.5">
+                        <span>提取时长 / Video Extraction</span>
+                      </div>
+                      <div className="flex gap-1 bg-black/30 p-1 rounded-[16px]">
+                        {['1S', '5S', '10S'].map(opt => (
+                          <button key={opt} onClick={() => setVideoExtractLen(opt)} className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-[12px] transition-all ${videoExtractLen === opt ? 'bg-zinc-700 text-green-400' : 'bg-transparent text-zinc-600 hover:text-zinc-300'}`}>
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* 卡片2：参数控制 */}
-                  <div className={`${cardClass} p-4`}>
+                  <div className={`${cardClass}`}>
                     <div className="flex flex-col gap-3.5 text-left"> 
                       
                       {/* 1. 像素粒径 */}
                       <div className="flex flex-col gap-1.5 text-left">
                         <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest text-left">
                           <span>像素粒径 / Pixel Size</span>
-                          <span>{pixelSize}PX</span>
+                          <span className="font-mono">{pixelSize}PX</span>
                         </div>
                         <input 
                           type="range" min="1" max="40" 
@@ -764,7 +814,7 @@
                           >
                             <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest text-left">
                               <span>{item.label}</span>
-                              <span id={item.displayId}>{item.id === 'slider-saturation' ? item.val.toFixed(1) : item.val}</span>
+                              <span id={item.displayId} className="font-mono">{item.id === 'slider-saturation' ? item.val.toFixed(1) : item.val}</span>
                             </div>
                             <input 
                                 id={item.id}
@@ -789,12 +839,12 @@
                   </div>
 
                   {/* 卡片3：调色板 - 已去掉小标题 */}
-                  <div className={`${cardClass} p-4 transition-opacity duration-500 ${mode === 'GBC' ? 'opacity-20 pointer-events-none grayscale' : 'opacity-100'}`}>
+                  <div className={`${cardClass} transition-opacity duration-500 ${mode === 'GBC' ? 'opacity-20 pointer-events-none grayscale' : 'opacity-100'}`}>
                     <div className="grid grid-cols-2 gap-2 text-left">
                       {PALETTES.map((p, i) => (
-                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-2 px-3 py-2 rounded-xl transition-all ${paletteIdx === i ? 'bg-zinc-800 ring-1 ring-green-500 text-green-400' : 'bg-black/30 hover:bg-zinc-800 text-zinc-500'}`}>
+                        <button key={i} onClick={() => setPaletteIdx(i)} className={`group flex flex-col gap-2 px-3 py-2 rounded-[12px] transition-all ${paletteIdx === i ? 'bg-zinc-800 text-green-400' : 'bg-black/30 hover:bg-zinc-800 text-zinc-500'}`}>
                           <span className="text-[9px] font-black uppercase tracking-tighter truncate text-left">{p.name.split(' (')[0]}</span>
-                          <div className="flex h-1 w-full rounded-full overflow-hidden shadow-inner">
+                          <div className="flex h-1 w-full rounded-full overflow-hidden">
                             {p.colors.map(c => <div key={c} style={{backgroundColor: c}} className="flex-1" />)}
                           </div>
                         </button>
@@ -836,7 +886,7 @@
                     <div className="flex items-center justify-center w-full h-full animate-pop-in">
                       <canvas 
                         ref={canvasRef} 
-                        className="max-w-full max-h-full rounded-sm shadow-[0_30px_80px_rgba(0,0,0,0.9)] object-contain" 
+                        className="max-w-full max-h-full rounded-[12px] object-contain" 
                       />
                     </div>
                   )}
@@ -845,21 +895,28 @@
                 {/* 底部贴士栏 */}
                 <div className="h-14 flex items-center px-8 shrink-0 z-20 pointer-events-none text-left">
                   {mediaObj && (
-                    <div className="w-full flex justify-between items-center opacity-40 hover:opacity-100 transition-opacity duration-500">
-                      <div className="flex flex-col gap-0.5 text-left">
-                        <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest text-left">有君建议 / Hint</div>
-                        <div className="h-[12px] relative overflow-hidden min-w-[200px] text-left">
+                    <div className="w-full flex justify-between items-start opacity-40 hover:opacity-100 transition-opacity duration-500 gap-8">
+                      
+                      {/* 左侧：有君建议 */}
+                      <div className="flex-1 flex flex-col gap-1.5 overflow-hidden">
+                        <div className="text-[9px] font-black text-zinc-600 uppercase tracking-widest leading-none">有君建议 / HINT</div>
+                        <div className="h-[12px] relative w-full">
                           {JUNE_TIPS.map((tip, index) => (
-                            <div key={index} className={`absolute left-0 right-0 top-0 text-[9px] font-bold text-green-400/80 leading-none transition-all duration-1000 ${currentTipIdx === index ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}>
+                            <div key={index} className={`absolute left-0 top-0 w-full text-[10px] font-bold text-green-400/80 leading-none whitespace-nowrap truncate transition-all duration-1000 ${currentTipIdx === index ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}>
                               {tip}
                             </div>
                           ))}
                         </div>
                       </div>
-                      <div className="text-right flex flex-col gap-0.5 text-left">
-                        <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest text-right">系统状态 / Status</div>
-                        <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.1em] text-right">Signal: Nominal</div>
+                      
+                      {/* 右侧：系统状态 */}
+                      <div className="flex flex-col gap-1.5 text-right shrink-0">
+                        <div className="text-[9px] font-black text-zinc-600 uppercase tracking-widest leading-none">系统状态 / STATUS</div>
+                        <div className="h-[12px] flex items-start justify-end">
+                          <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.1em] leading-none">SIGNAL: NOMINAL</div>
+                        </div>
                       </div>
+                      
                     </div>
                   )}
                 </div>
