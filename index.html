@@ -556,19 +556,63 @@
           try { recorder = new MediaRecorder(stream, options); } catch(e) { recorder = new MediaRecorder(stream, { videoBitsPerSecond: 100000000 }); }
           recorderRef.current = recorder; 
           const chunks = [];
+          
           recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+          
           recorder.onstop = () => {
             const extension = recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
             const blob = new Blob(chunks, { type: recorder.mimeType }); 
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a'); 
             link.download = `gbg_${mediaType}_${Date.now()}.${extension}`;
-            link.href = url; link.click(); setIsRecording(false);
+            link.href = url; link.click(); 
+            setIsRecording(false);
+            
+            // 恢复视频的循环播放状态
+            if (mediaType === 'video' && mediaObj) {
+                mediaObj.loop = true;
+                mediaObj.play().catch(() => {});
+            }
           };
-          recorder.start();
-          let targetDuration = 10000; 
-          if (mediaType === 'video' && mediaObj.duration) targetDuration = mediaObj.duration * 1000; 
-          setTimeout(() => { if (recorderRef.current && recorderRef.current.state === "recording") recorderRef.current.stop(); }, targetDuration);
+
+          if (mediaType === 'video' && mediaObj) {
+              // 视频导出逻辑：重置到第0秒，录制到最后一秒
+              mediaObj.pause();
+              mediaObj.loop = false; // 取消循环，以便能够监听到 ended 事件
+              
+              const onSeeked = () => {
+                  mediaObj.removeEventListener('seeked', onSeeked);
+                  recorder.start();
+                  mediaObj.play();
+              };
+              
+              const onEnded = () => {
+                  mediaObj.removeEventListener('ended', onEnded);
+                  if (recorderRef.current && recorderRef.current.state === "recording") {
+                      recorderRef.current.stop();
+                  }
+              };
+
+              // 如果用户手动点击了停止，清理事件监听
+              recorder.addEventListener('stop', () => {
+                  mediaObj.removeEventListener('seeked', onSeeked);
+                  mediaObj.removeEventListener('ended', onEnded);
+              });
+
+              mediaObj.addEventListener('seeked', onSeeked);
+              mediaObj.addEventListener('ended', onEnded);
+              
+              // 强制回到 0 秒
+              mediaObj.currentTime = 0;
+          } else {
+              // 图片导出视频（Lab模式），默认录制10秒
+              recorder.start();
+              setTimeout(() => { 
+                  if (recorderRef.current && recorderRef.current.state === "recording") {
+                      recorderRef.current.stop(); 
+                  }
+              }, 10000);
+          }
         } else {
           const link = document.createElement('a'); 
           link.download = `gbg_${Date.now()}.png`;
